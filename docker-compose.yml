@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  llm-bridge:
+    build: .
+    container_name: sekha-llm-bridge
+    ports:
+      - "5001:5001"
+    environment:
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+    depends_on:
+      - redis
+    restart: unless-stopped
+    networks:
+      - sekha-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: sekha-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
+    networks:
+      - sekha-network
+
+  celery-worker:
+    build: .
+    container_name: sekha-celery-worker
+    command: celery -A workers.celery_app worker --loglevel=info
+    environment:
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+    depends_on:
+      - redis
+    restart: unless-stopped
+    networks:
+      - sekha-network
+
+volumes:
+  redis-data:
+
+networks:
+  sekha-network:
+    driver: bridge
