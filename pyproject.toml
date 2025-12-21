@@ -1,0 +1,23 @@
+[tool.poetry]
+name = "sekha-llm-bridge"
+version = "0.1.0"
+description = "LLM Bridge Service for Sekha"
+authors = ["Sekha AI <dev@sekha.ai>"]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+fastapi = "^0.115.0"
+uvicorn = { extras = ["standard"], version = "^0.30.0" }
+pydantic = "^2.9.0"
+pydantic-settings = "^2.5.2"
+litellm = "^1.53.0"
+celery = "^5.4.0"
+redis = "^5.0.0"
+httpx = "^0.27.0"
+
+[tool.poetry.scripts]
+llm-bridge = "sekha_llm_bridge.main:run"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
