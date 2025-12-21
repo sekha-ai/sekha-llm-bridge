@@ -151,3 +151,12 @@ python main.py
 
 6. Test
 curl http://localhost:5001/health
+
+## Testing
+
+
+Notes:
+
+- These tests only validate FastAPI routing and JSON schema basics.
+- Model calls (Ollama / LiteLLM) are not exercised; full integration tests are deferred until all modules are complete.
+
