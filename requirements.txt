@@ -6,3 +6,5 @@ litellm
 celery
 redis
 httpx
+pytest
+pytest-asyncio
