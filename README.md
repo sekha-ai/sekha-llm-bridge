@@ -154,9 +154,96 @@ curl http://localhost:5001/health
 
 ## Testing
 
+### Run All Tests
+Install test dependencies
+pip install pytest pytest-asyncio pytest-cov
 
-Notes:
+Run tests
+pytest
 
-- These tests only validate FastAPI routing and JSON schema basics.
-- Model calls (Ollama / LiteLLM) are not exercised; full integration tests are deferred until all modules are complete.
+With coverage report
+pytest --cov=services --cov=utils --cov-report=html
 
+View coverage
+open htmlcov/index.html
+
+
+### Test Individual Components
+
+Test services only
+pytest tests/test_services.py -v
+
+Test API endpoints
+pytest tests/test_api.py -v
+
+Test specific function
+pytest tests/test_services.py::test_embedding_generation -v
+
+
+### Expected Coverage
+
+- Services: >90%
+- API endpoints: >85%
+- Utilities: >80%
+
+
+## Testing
+
+### Run Tests
+
+Install test dependencies
+pip install -e ".[dev]"
+
+Run all tests
+pytest
+
+Run with coverage
+pytest --cov=src/sekha_mcp --cov-report=html
+
+View coverage
+open htmlcov/index.html
+
+
+### Test Individual Tools
+
+Test all tools
+pytest tests/test_tools.py -v
+
+Test specific tool
+pytest tests/test_tools.py::test_memory_store_success -v
+
+Test client
+pytest tests/test_client.py -v
+
+
+### Manual Testing with Real Controller
+
+1. Start Sekha Controller
+cd ../sekha-controller
+cargo run
+
+2. In another terminal, test MCP server
+cd ../sekha-mcp
+python main.py
+
+3. Send test via MCP client (e.g., Claude Desktop)
+Or use the test script:
+python -c "
+import asyncio
+from src.sekha_mcp.client import sekha_client
+
+async def test():
+result = await sekha_client.search_memory('test query', limit=5)
+print(result)
+
+asyncio.run(test())
+"
+
+text
+
+
+### Expected Test Coverage
+
+- Tools: >95%
+- Client: >85%
+- Server: >80%
