@@ -24,13 +24,13 @@ Text:
 {text}
 
 Return a JSON object with arrays for each entity type:
-{
+{{
 "people": ["name1", "name2"],
 "organizations": ["org1"],
 "technical_terms": ["term1", "term2"],
 "concepts": ["concept1"]
-}
-
+}}
+"""
     
     async def extract_entities(self, request: ExtractRequest) -> ExtractResponse:
         """Extract entities from text"""
@@ -50,14 +50,12 @@ Return a JSON object with arrays for each entity type:
                 max_tokens=1000
             )
             
-            # Parse JSON from response
-            # Remove markdown code fences if present
             response = response.strip()
-            if response.startswith("```
+            if response.startswith("```json"):
                 response = response[7:]
             if response.startswith("```"):
                 response = response[3:]
-            if response.endswith("```
+            if response.endswith("```"):
                 response = response[:-3]
             
             entities = json.loads(response.strip())
@@ -69,7 +67,6 @@ Return a JSON object with arrays for each entity type:
         
         except json.JSONDecodeError as e:
             logger.error(f"Failed to parse entity extraction JSON: {e}")
-            # Return empty entities on parse failure
             return ExtractResponse(
                 entities={
                     "people": [],
