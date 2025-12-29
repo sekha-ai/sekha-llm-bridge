@@ -3,9 +3,9 @@
 from typing import List
 import logging
 
-from utils.llm_client import llm_client
-from models.requests import EmbedRequest
-from models.responses import EmbedResponse
+from sekha_llm_bridge.utils.llm_client import llm_client
+from sekha_llm_bridge.models.requests import EmbedRequest
+from sekha_llm_bridge.models.responses import EmbedResponse
 
 logger = logging.getLogger(__name__)
 
@@ -23,10 +23,14 @@ class EmbeddingService:
                 model=request.model
             )
             
+            # Estimate tokens (rough: 1 token ≈ 4 chars)
+            tokens_used = len(request.text) // 4
+            
             return EmbedResponse(
                 embedding=embedding,
                 model=request.model or "default",
-                dimension=len(embedding)
+                dimension=len(embedding),
+                tokens_used=tokens_used  # ADDED: Required field
             )
         
         except Exception as e:

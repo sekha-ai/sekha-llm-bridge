@@ -3,9 +3,9 @@
 import logging
 from typing import Dict
 
-from utils.llm_client import llm_client
-from models.requests import ScoreRequest
-from models.responses import ScoreResponse
+from sekha_llm_bridge.utils.llm_client import llm_client
+from sekha_llm_bridge.models.requests import ScoreRequest
+from sekha_llm_bridge.models.responses import ScoreResponse
 
 logger = logging.getLogger(__name__)
 

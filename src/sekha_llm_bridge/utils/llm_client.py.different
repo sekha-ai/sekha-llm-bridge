@@ -1,9 +1,9 @@
 import httpx
 import json
 from typing import List, Optional, Dict, Any
-from config import settings
+from sekha_llm_bridge.config import settings
 import logging
-from models import (
+from sekha_llm_bridge.models import (
     EmbedResponse, SummarizeResponse, ScoreImportanceResponse,
     ExtractEntitiesResponse, TaskLevel
 )

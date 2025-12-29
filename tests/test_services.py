@@ -3,11 +3,11 @@
 import pytest
 from unittest.mock import AsyncMock, patch
 
-from services.embedding_service import embedding_service
-from services.summarization_service import summarization_service
-from services.entity_extraction_service import entity_extraction_service
-from services.importance_scorer import importance_scorer_service
-from models.requests import (
+from sekha_llm_bridge.services.embedding_service import embedding_service
+from sekha_llm_bridge.services.summarization_service import summarization_service
+from sekha_llm_bridge.services.entity_extraction_service import entity_extraction_service
+from sekha_llm_bridge.services.importance_scorer import importance_scorer_service
+from sekha_llm_bridge.models.requests import (
     EmbedRequest,
     SummarizeRequest,
     ExtractRequest,
@@ -22,7 +22,7 @@ from models.requests import (
 @pytest.mark.asyncio
 async def test_embedding_generation():
     """Test embedding generation"""
-    with patch('utils.llm_client.llm_client.generate_embedding', new=AsyncMock()) as mock_embed:
+    with patch('sekha_llm_bridge.utils.llm_client.llm_client.generate_embedding', new=AsyncMock()) as mock_embed:
         mock_embed.return_value = [0.1] * 768
         
         request = EmbedRequest(text="Test text")
@@ -36,7 +36,7 @@ async def test_embedding_generation():
 @pytest.mark.asyncio
 async def test_batch_embedding_generation():
     """Test batch embedding generation"""
-    with patch('utils.llm_client.llm_client.generate_embedding', new=AsyncMock()) as mock_embed:
+    with patch('sekha_llm_bridge.utils.llm_client.llm_client.generate_embedding', new=AsyncMock()) as mock_embed:
         mock_embed.return_value = [0.1] * 768
         
         texts = ["Text 1", "Text 2", "Text 3"]
@@ -54,7 +54,7 @@ async def test_batch_embedding_generation():
 @pytest.mark.asyncio
 async def test_daily_summarization():
     """Test daily summary generation"""
-    with patch('utils.llm_client.llm_client.generate_completion', new=AsyncMock()) as mock_llm:
+    with patch('sekha_llm_bridge.utils.llm_client.llm_client.generate_completion', new=AsyncMock()) as mock_llm:
         mock_llm.return_value = "Test summary of the conversation"
         
         request = SummarizeRequest(
@@ -72,7 +72,7 @@ async def test_daily_summarization():
 @pytest.mark.asyncio
 async def test_weekly_summarization():
     """Test weekly summary generation"""
-    with patch('utils.llm_client.llm_client.generate_completion', new=AsyncMock()) as mock_llm:
+    with patch('sekha_llm_bridge.utils.llm_client.llm_client.generate_completion', new=AsyncMock()) as mock_llm:
         mock_llm.return_value = "Weekly themes and patterns"
         
         request = SummarizeRequest(
@@ -88,7 +88,7 @@ async def test_weekly_summarization():
 @pytest.mark.asyncio
 async def test_monthly_summarization():
     """Test monthly summary generation"""
-    with patch('utils.llm_client.llm_client.generate_completion', new=AsyncMock()) as mock_llm:
+    with patch('sekha_llm_bridge.utils.llm_client.llm_client.generate_completion', new=AsyncMock()) as mock_llm:
         mock_llm.return_value = "Monthly overview"
         
         request = SummarizeRequest(
@@ -107,7 +107,7 @@ async def test_monthly_summarization():
 @pytest.mark.asyncio
 async def test_entity_extraction():
     """Test entity extraction"""
-    with patch('utils.llm_client.llm_client.generate_completion', new=AsyncMock()) as mock_llm:
+    with patch('sekha_llm_bridge.utils.llm_client.llm_client.generate_completion', new=AsyncMock()) as mock_llm:
         mock_llm.return_value = '''```
 {
   "people": ["Alice", "Bob"],
@@ -129,7 +129,7 @@ async def test_entity_extraction():
 @pytest.mark.asyncio
 async def test_entity_extraction_json_parse_error():
     """Test entity extraction handles malformed JSON"""
-    with patch('utils.llm_client.llm_client.generate_completion', new=AsyncMock()) as mock_llm:
+    with patch('sekha_llm_bridge.utils.llm_client.llm_client.generate_completion', new=AsyncMock()) as mock_llm:
         mock_llm.return_value = "Not valid JSON"
         
         request = ExtractRequest(text="Test text")
@@ -147,7 +147,7 @@ async def test_entity_extraction_json_parse_error():
 @pytest.mark.asyncio
 async def test_importance_scoring():
     """Test importance scoring"""
-    with patch('utils.llm_client.llm_client.generate_completion', new=AsyncMock()) as mock_llm:
+    with patch('sekha_llm_bridge.utils.llm_client.llm_client.generate_completion', new=AsyncMock()) as mock_llm:
         mock_llm.return_value = "Score: 8\n\nThis conversation contains important decisions."
         
         request = ScoreRequest(conversation="Important decision-making conversation")
@@ -175,7 +175,7 @@ async def test_score_extraction_patterns():
 @pytest.mark.asyncio
 async def test_importance_scoring_failure():
     """Test importance scoring handles failures gracefully"""
-    with patch('utils.llm_client.llm_client.generate_completion', new=AsyncMock()) as mock_llm:
+    with patch('sekha_llm_bridge.utils.llm_client.llm_client.generate_completion', new=AsyncMock()) as mock_llm:
         mock_llm.side_effect = Exception("LLM error")
         
         request = ScoreRequest(conversation="Test")

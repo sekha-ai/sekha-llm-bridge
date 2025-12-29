@@ -3,9 +3,9 @@
 from typing import List
 import logging
 
-from utils.llm_client import llm_client
-from models.requests import SummarizeRequest
-from models.responses import SummarizeResponse
+from sekha_llm_bridge.utils.llm_client import llm_client
+from sekha_llm_bridge.models.requests import SummarizeRequest
+from sekha_llm_bridge.models.responses import SummarizeResponse
 
 logger = logging.getLogger(__name__)
 
@@ -63,11 +63,17 @@ Monthly Summary:"""
                 max_tokens=500
             )
             
+            # Estimate tokens (rough: 1 token ≈ 4 chars)
+            input_tokens = len(messages_text) // 4
+            output_tokens = len(summary) // 4
+            tokens_used = input_tokens + output_tokens
+            
             return SummarizeResponse(
                 summary=summary.strip(),
                 level=request.level,
                 model=request.model or "default",
-                message_count=len(request.messages)
+                message_count=len(request.messages),
+                tokens_used=tokens_used  # ADDED: Required field
             )
         
         except Exception as e:

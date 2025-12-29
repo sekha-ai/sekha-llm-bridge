@@ -1,7 +1,7 @@
 """Celery configuration for background jobs"""
 
 from celery import Celery
-from config import settings
+from sekha_llm_bridge.config import settings
 
 celery_app = Celery(
     "sekha_llm_bridge",

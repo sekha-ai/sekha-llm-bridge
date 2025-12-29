@@ -4,9 +4,9 @@ from typing import List, Dict
 import logging
 import json
 
-from utils.llm_client import llm_client
-from models.requests import ExtractRequest
-from models.responses import ExtractResponse
+from sekha_llm_bridge.utils.llm_client import llm_client
+from sekha_llm_bridge.models.requests import ExtractRequest
+from sekha_llm_bridge.models.responses import ExtractResponse
 
 logger = logging.getLogger(__name__)
 

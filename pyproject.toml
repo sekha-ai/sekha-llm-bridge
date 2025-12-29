@@ -3,6 +3,9 @@ name = "sekha-llm-bridge"
 version = "0.1.0"
 description = "LLM Bridge Service for Sekha"
 authors = ["Sekha AI <dev@sekha.ai>"]
+packages = [
+    { include = "sekha_llm_bridge", from = "src" },
+]
 
 [tool.poetry.dependencies]
 python = "^3.11"
@@ -16,6 +19,16 @@ redis = "^5.0.0"
 httpx = "^0.27.0"
 pytest = "^9.0.2"
 pytest-asyncio = "^1.3.0"
+tenacity = "^9.1.2"
+prometheus-client = "^0.23.1"
+sqlalchemy = "^2.0.45"
+alembic = "^1.17.2"
+psycopg2-binary = "^2.9.11"
+python-dotenv = "^1.2.1"
+numpy = "^2.4.0"
+pandas = "^2.3.3"
+scikit-learn = "^1.8.0"
+config = "^0.5.1"
 
 [tool.poetry.scripts]
 llm-bridge = "sekha_llm_bridge.main:run"

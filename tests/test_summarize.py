@@ -12,4 +12,4 @@ async def test_summarize_invalid_level():
         )
     assert resp.status_code == 400
     body = resp.json()
-    assert "level must be daily" in body["detail"]
+    assert "Must be daily" in body["detail"]
