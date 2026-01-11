@@ -27,7 +27,7 @@ from sekha_llm_bridge.services.importance_scorer import importance_scorer_servic
 
 # Configure logging
 logging.basicConfig(
-    level=getattr(logging, settings.log_level),
+    level=getattr(logging, settings.log_level.upper()),
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
