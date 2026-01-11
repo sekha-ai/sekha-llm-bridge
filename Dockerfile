@@ -25,5 +25,5 @@ EXPOSE 5001
 HEALTHCHECK --interval=30s --timeout=10s --start-period=20s --retries=3 \
   CMD curl -f http://localhost:5001/health || exit 1
 
-# Run application using python module
-CMD ["python", "-m", "sekha_llm_bridge.main"]
+# Run application using uvicorn directly
+CMD ["uvicorn", "sekha_llm_bridge.main:app", "--host", "0.0.0.0", "--port", "5001"]
