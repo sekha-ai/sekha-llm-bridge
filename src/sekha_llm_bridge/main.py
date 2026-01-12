@@ -3,6 +3,8 @@
 # src/sekha_llm_bridge/main.py
 
 import logging
+import time
+import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime
 
@@ -17,7 +19,9 @@ from sekha_llm_bridge.models import (
     SummarizeRequest, SummarizeResponse,
     ExtractRequest, ExtractResponse,
     ScoreRequest, ScoreResponse,
-    HealthResponse
+    HealthResponse,
+    ChatCompletionRequest, ChatCompletionResponse,
+    ChatCompletionChoice, ChatCompletionUsage
 )
 from sekha_llm_bridge.utils.llm_client import llm_client
 from sekha_llm_bridge.services.embedding_service import embedding_service
@@ -221,6 +225,64 @@ async def score_importance_v1(request: ScoreRequest):
     except Exception as e:
         logger.error(f"Importance scoring failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================
+# Chat Completions Endpoints (OpenAI-compatible)
+# ============================================
+
+@app.post("/v1/chat/completions", response_model=ChatCompletionResponse, tags=["Chat"])
+async def chat_completions(request: ChatCompletionRequest):
+    """
+    OpenAI-compatible chat completions endpoint.
+    Routes chat requests through bridge to Ollama.
+    """
+    try:
+        # Convert ChatMessage objects to dicts for llm_client
+        messages_dict = [
+            {"role": msg.role, "content": msg.content}
+            for msg in request.messages
+        ]
+        
+        # Generate completion via llm_client
+        content = await llm_client.generate_completion(
+            messages=messages_dict,
+            model=request.model,
+            temperature=request.temperature or 0.7,
+            max_tokens=request.max_tokens or 2000
+        )
+        
+        # Build OpenAI-compatible response
+        response = ChatCompletionResponse(
+            id=f"chatcmpl-{uuid.uuid4().hex[:8]}",
+            object="chat.completion",
+            created=int(time.time()),
+            model=request.model or settings.default_model,
+            choices=[
+                ChatCompletionChoice(
+                    index=0,
+                    message={"role": "assistant", "content": content},
+                    finish_reason="stop"
+                )
+            ],
+            usage=ChatCompletionUsage(
+                prompt_tokens=sum(len(m.content.split()) for m in request.messages),
+                completion_tokens=len(content.split()),
+                total_tokens=sum(len(m.content.split()) for m in request.messages) + len(content.split())
+            )
+        )
+        
+        return response
+        
+    except Exception as e:
+        logger.error(f"Chat completion failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/v1/chat/completions", response_model=ChatCompletionResponse, tags=["Chat"])
+async def chat_completions_v1(request: ChatCompletionRequest):
+    """API v1 version of chat completions"""
+    return await chat_completions(request)
 
 
 # ============================================
