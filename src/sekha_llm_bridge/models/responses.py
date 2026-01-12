@@ -40,3 +40,27 @@ class HealthResponse(BaseModel):
     ollama_status: Dict[str, Any] = Field(..., description="Ollama health info")
     models_loaded: List[str] = Field(..., description="Available models")
     timestamp: str = Field(..., description="ISO timestamp")
+
+
+class ChatCompletionChoice(BaseModel):
+    """Single completion choice"""
+    index: int = Field(..., description="Choice index")
+    message: Dict[str, str] = Field(..., description="Generated message")
+    finish_reason: str = Field(..., description="Reason for completion finish")
+
+
+class ChatCompletionUsage(BaseModel):
+    """Token usage information"""
+    prompt_tokens: int = Field(..., description="Tokens in prompt")
+    completion_tokens: int = Field(..., description="Tokens in completion")
+    total_tokens: int = Field(..., description="Total tokens used")
+
+
+class ChatCompletionResponse(BaseModel):
+    """OpenAI-compatible chat completion response"""
+    id: str = Field(..., description="Completion ID")
+    object: str = Field(default="chat.completion", description="Object type")
+    created: int = Field(..., description="Unix timestamp")
+    model: str = Field(..., description="Model used")
+    choices: List[ChatCompletionChoice] = Field(..., description="Completion choices")
+    usage: ChatCompletionUsage = Field(..., description="Token usage")
