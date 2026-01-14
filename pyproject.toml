@@ -33,6 +33,25 @@ config = "^0.5.1"
 [tool.poetry.scripts]
 llm-bridge = "sekha_llm_bridge.main:run"
 
+[tool.coverage.run]
+omit = [
+    "src/sekha_llm_bridge/tasks.py",
+    "src/sekha_llm_bridge/worker.py",
+    "src/sekha_llm_bridge/workers/*",
+    "src/sekha_llm_bridge/models/init.py",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "@abstractmethod",
+]
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
