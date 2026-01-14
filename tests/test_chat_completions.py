@@ -11,8 +11,8 @@ async def test_chat_completions_endpoint_exists():
             "/v1/chat/completions",
             json={
                 "messages": [{"role": "user", "content": "Hello"}],
-                "model": "llama3.1:8b"
-            }
+                "model": "llama3.1:8b",
+            },
         )
     # Should not be 404 (endpoint exists)
     assert resp.status_code != 404
@@ -22,10 +22,7 @@ async def test_chat_completions_endpoint_exists():
 async def test_chat_completions_requires_messages():
     """Test that chat completions requires messages field"""
     async with AsyncClient(app=app, base_url="http://test") as ac:
-        resp = await ac.post(
-            "/v1/chat/completions",
-            json={"model": "llama3.1:8b"}
-        )
+        resp = await ac.post("/v1/chat/completions", json={"model": "llama3.1:8b"})
     # Should be 422 (validation error) not 404
     assert resp.status_code == 422
 
@@ -38,8 +35,8 @@ async def test_chat_completions_v1_alias():
             "/api/v1/chat/completions",
             json={
                 "messages": [{"role": "user", "content": "Hello"}],
-                "model": "llama3.1:8b"
-            }
+                "model": "llama3.1:8b",
+            },
         )
     # Should not be 404 (endpoint exists)
     assert resp.status_code != 404
@@ -55,8 +52,8 @@ async def test_chat_completions_accepts_optional_params():
                 "messages": [{"role": "user", "content": "Hello"}],
                 "model": "llama3.1:8b",
                 "temperature": 0.5,
-                "max_tokens": 100
-            }
+                "max_tokens": 100,
+            },
         )
     # Should not be 404 or 422 (endpoint exists and accepts params)
     assert resp.status_code not in [404, 422]

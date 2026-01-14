@@ -3,6 +3,7 @@ from httpx import AsyncClient
 from sekha_llm_bridge.main import app
 from fastapi.testclient import TestClient
 
+
 @pytest.mark.asyncio
 async def test_health_endpoint():
     async with AsyncClient(app=app, base_url="http://test") as ac:
@@ -13,7 +14,9 @@ async def test_health_endpoint():
     assert "redis" in data
     assert "ollama" in data
 
+
 client = TestClient(app)
+
 
 def test_summarize_endpoint_mock():
     """Test that the summarize endpoint exists and responds"""
@@ -21,22 +24,19 @@ def test_summarize_endpoint_mock():
         "/summarize",
         json={
             "messages": ["test message 1", "test message 2"],
-                "level": "daily",
-            "model": "test-model"
-        }
+            "level": "daily",
+            "model": "test-model",
+        },
     )
     # Will return 500 if Ollama not configured, but endpoint exists
     assert response.status_code in [200, 422, 500]
+
 
 def test_embedding_endpoint_mock():
     """Test that the embedding endpoint exists and responds"""
     response = client.post(
         "/embeddings",
-        json={
-            "text": "test text",
-                "level": "daily",
-            "model": "test-model"
-        }
+        json={"text": "test text", "level": "daily", "model": "test-model"},
     )
     # Will return 500 if Ollama not configured, but endpoint exists
     assert response.status_code in [200, 422, 500]

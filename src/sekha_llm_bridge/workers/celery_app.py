@@ -7,7 +7,7 @@ celery_app = Celery(
     "sekha_llm_bridge",
     broker=settings.celery_broker_url,
     backend=settings.celery_result_backend,
-    include=["workers.tasks"]
+    include=["workers.tasks"],
 )
 
 # Configuration

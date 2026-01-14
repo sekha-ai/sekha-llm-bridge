@@ -15,24 +15,32 @@ from prometheus_client import make_asgi_app
 # Internal imports - all from the package
 from sekha_llm_bridge.config import settings
 from sekha_llm_bridge.models import (
-    EmbedRequest, EmbedResponse,
-    SummarizeRequest, SummarizeResponse,
-    ExtractRequest, ExtractResponse,
-    ScoreRequest, ScoreResponse,
+    EmbedRequest,
+    EmbedResponse,
+    SummarizeRequest,
+    SummarizeResponse,
+    ExtractRequest,
+    ExtractResponse,
+    ScoreRequest,
+    ScoreResponse,
     HealthResponse,
-    ChatCompletionRequest, ChatCompletionResponse,
-    ChatCompletionChoice, ChatCompletionUsage
+    ChatCompletionRequest,
+    ChatCompletionResponse,
+    ChatCompletionChoice,
+    ChatCompletionUsage,
 )
 from sekha_llm_bridge.utils.llm_client import llm_client
 from sekha_llm_bridge.services.embedding_service import embedding_service
 from sekha_llm_bridge.services.summarization_service import summarization_service
-from sekha_llm_bridge.services.entity_extraction_service import entity_extraction_service
+from sekha_llm_bridge.services.entity_extraction_service import (
+    entity_extraction_service,
+)
 from sekha_llm_bridge.services.importance_scorer import importance_scorer_service
 
 # Configure logging
 logging.basicConfig(
     level=getattr(logging, settings.log_level.upper()),
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
 
@@ -41,16 +49,16 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     """Startup and shutdown events"""
     logger.info("🚀 Starting Sekha LLM Bridge")
-    
+
     # Check Ollama health on startup
     health = await llm_client.health_check()
     if health["status"] == "healthy":
         logger.info(f"✅ Ollama is healthy: {health['models_available']}")
     else:
         logger.warning(f"⚠️ Ollama health check failed: {health.get('reason')}")
-    
+
     yield
-    
+
     logger.info("👋 Shutting down Sekha LLM Bridge")
 
 
@@ -59,7 +67,7 @@ app = FastAPI(
     title="Sekha LLM Bridge",
     description="LLM operations service for Project Sekha",
     version="1.0.0",
-    lifespan=lifespan
+    lifespan=lifespan,
 )
 
 # Add CORS middleware
@@ -80,25 +88,27 @@ app.mount("/metrics", metrics_app)
 # Health Endpoint (with timestamp)
 # ============================================
 
+
 @app.get("/health", response_model=HealthResponse, tags=["Health"])
 async def health_check():
     """Check service health and Ollama connectivity"""
     ollama_status = await llm_client.health_check()
-    
+
     if ollama_status["status"] != "healthy":
         raise HTTPException(status_code=503, detail="Ollama is not available")
-    
+
     return HealthResponse(
         status="healthy",
         timestamp=datetime.utcnow().isoformat(),
         ollama_status=ollama_status,
-        models_loaded=ollama_status.get("models_available", [])
+        models_loaded=ollama_status.get("models_available", []),
     )
 
 
 # ============================================
 # Root-level endpoints (for backward compatibility/tests)
 # ============================================
+
 
 @app.post("/embed", response_model=EmbedResponse, tags=["Embeddings"])
 async def embed_text_root(request: EmbedRequest):
@@ -108,7 +118,7 @@ async def embed_text_root(request: EmbedRequest):
         return EmbedResponse(
             embedding=embedding,
             model=request.model or settings.embedding_model,
-            dimension=len(embedding)
+            dimension=len(embedding),
         )
     except Exception as e:
         logger.error(f"Embedding generation failed: {e}")
@@ -121,24 +131,23 @@ async def summarize_messages_root(request: SummarizeRequest):
     if request.level not in ["daily", "weekly", "monthly"]:
         raise HTTPException(
             status_code=400,
-            detail=f"Invalid level: {request.level}. Must be daily, weekly, or monthly"
+            detail=f"Invalid level: {request.level}. Must be daily, weekly, or monthly",
         )
-    
+
     try:
         # Build prompt from messages
         messages_str = "\n".join(request.messages)
         prompt = f"Summarize these messages. Level: {request.level}\n\n{messages_str}"
-        
+
         summary = await llm_client.generate_completion(
-            [{"role": "user", "content": prompt}],
-            request.model
+            [{"role": "user", "content": prompt}], request.model
         )
-        
+
         return SummarizeResponse(
             summary=summary.strip(),
             level=request.level,
             model=request.model or settings.summarization_model,
-            message_count=len(request.messages)
+            message_count=len(request.messages),
         )
     except Exception as e:
         logger.error(f"Summarization failed: {e}")
@@ -170,8 +179,11 @@ async def score_importance_root(request: ScoreRequest):
         logger.error(f"Importance scoring failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+
 # Alias for /score_importance (some tests/integrations expect this path)
-@app.post("/score_importance", response_model=ScoreResponse, tags=["Importance Scoring"])
+@app.post(
+    "/score_importance", response_model=ScoreResponse, tags=["Importance Scoring"]
+)
 async def score_importance_alias(request: ScoreRequest):
     """Alias endpoint for importance scoring (compatibility)"""
     return await score_importance_root(request)
@@ -180,6 +192,7 @@ async def score_importance_alias(request: ScoreRequest):
 # ============================================
 # API v1 endpoints (primary)
 # ============================================
+
 
 @app.post("/api/v1/embed", response_model=EmbedResponse, tags=["Embeddings"])
 async def generate_embedding(request: EmbedRequest):
@@ -197,9 +210,9 @@ async def generate_summary(request: SummarizeRequest):
     if request.level not in ["daily", "weekly", "monthly"]:
         raise HTTPException(
             status_code=400,
-            detail=f"Invalid level: {request.level}. Must be daily, weekly, or monthly"
+            detail=f"Invalid level: {request.level}. Must be daily, weekly, or monthly",
         )
-    
+
     try:
         return await summarization_service.generate_summary(request)
     except Exception as e:
@@ -231,6 +244,7 @@ async def score_importance_v1(request: ScoreRequest):
 # Chat Completions Endpoints (OpenAI-compatible)
 # ============================================
 
+
 @app.post("/v1/chat/completions", response_model=ChatCompletionResponse, tags=["Chat"])
 async def chat_completions(request: ChatCompletionRequest):
     """
@@ -240,18 +254,17 @@ async def chat_completions(request: ChatCompletionRequest):
     try:
         # Convert ChatMessage objects to dicts for llm_client
         messages_dict = [
-            {"role": msg.role, "content": msg.content}
-            for msg in request.messages
+            {"role": msg.role, "content": msg.content} for msg in request.messages
         ]
-        
+
         # Generate completion via llm_client
         content = await llm_client.generate_completion(
             messages=messages_dict,
             model=request.model,
             temperature=request.temperature or 0.7,
-            max_tokens=request.max_tokens or 2000
+            max_tokens=request.max_tokens or 2000,
         )
-        
+
         # Build OpenAI-compatible response
         response = ChatCompletionResponse(
             id=f"chatcmpl-{uuid.uuid4().hex[:8]}",
@@ -262,24 +275,27 @@ async def chat_completions(request: ChatCompletionRequest):
                 ChatCompletionChoice(
                     index=0,
                     message={"role": "assistant", "content": content},
-                    finish_reason="stop"
+                    finish_reason="stop",
                 )
             ],
             usage=ChatCompletionUsage(
                 prompt_tokens=sum(len(m.content.split()) for m in request.messages),
                 completion_tokens=len(content.split()),
-                total_tokens=sum(len(m.content.split()) for m in request.messages) + len(content.split())
-            )
+                total_tokens=sum(len(m.content.split()) for m in request.messages)
+                + len(content.split()),
+            ),
         )
-        
+
         return response
-        
+
     except Exception as e:
         logger.error(f"Chat completion failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.post("/api/v1/chat/completions", response_model=ChatCompletionResponse, tags=["Chat"])
+@app.post(
+    "/api/v1/chat/completions", response_model=ChatCompletionResponse, tags=["Chat"]
+)
 async def chat_completions_v1(request: ChatCompletionRequest):
     """API v1 version of chat completions"""
     return await chat_completions(request)
@@ -289,6 +305,7 @@ async def chat_completions_v1(request: ChatCompletionRequest):
 # Root Endpoint
 # ============================================
 
+
 @app.get("/", tags=["Root"])
 async def root():
     """Root endpoint"""
@@ -296,17 +313,17 @@ async def root():
         "service": "Sekha LLM Bridge",
         "version": "1.0.0",
         "docs": "/docs",
-        "health": "/health"
+        "health": "/health",
     }
 
 
 if __name__ == "__main__":
     import uvicorn
-    
+
     uvicorn.run(
         "main:app",
         host=settings.host,
         port=settings.port,
         reload=True,
-        log_level=settings.log_level.lower()
+        log_level=settings.log_level.lower(),
     )

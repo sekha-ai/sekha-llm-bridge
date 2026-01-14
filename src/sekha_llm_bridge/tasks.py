@@ -17,7 +17,9 @@ def embed_text_task(text: str, model: str | None = None) -> list[float]:
 
 
 @celery_app.task(name="tasks.summarize_messages")
-def summarize_messages_task(messages: List[str], level: str, model: str | None = None) -> str:
+def summarize_messages_task(
+    messages: List[str], level: str, model: str | None = None
+) -> str:
     model_name = model or settings.default_summarize_model
     joined = "\n".join(messages)
 
