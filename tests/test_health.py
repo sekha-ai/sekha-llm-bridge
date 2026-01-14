@@ -15,14 +15,6 @@ async def test_health_endpoint():
 
 client = TestClient(app)
 
-def test_health_endpoint():
-    """Test that the health endpoint returns 200"""
-    response = client.get("/health")
-    assert response.status_code == 200
-    data = response.json()
-    assert data["status"] == "healthy"
-    assert "timestamp" in data
-
 def test_summarize_endpoint_mock():
     """Test that the summarize endpoint exists and responds"""
     response = client.post(

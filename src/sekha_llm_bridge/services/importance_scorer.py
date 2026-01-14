@@ -1,7 +1,6 @@
 """Importance scoring service"""
 
 import logging
-from typing import Dict
 
 from sekha_llm_bridge.utils.llm_client import llm_client
 from sekha_llm_bridge.models.requests import ScoreRequest

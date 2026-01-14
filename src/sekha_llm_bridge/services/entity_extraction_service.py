@@ -1,6 +1,5 @@
 """Entity extraction service"""
 
-from typing import List, Dict
 import logging
 import json
 

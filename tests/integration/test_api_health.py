@@ -1,6 +1,5 @@
 """Integration test for bridge health endpoint"""
 
-import pytest
 from fastapi.testclient import TestClient
 from sekha_llm_bridge.main import app
 

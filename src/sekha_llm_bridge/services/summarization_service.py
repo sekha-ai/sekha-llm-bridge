@@ -1,6 +1,5 @@
 """Summarization service"""
 
-from typing import List
 import logging
 
 from sekha_llm_bridge.utils.llm_client import llm_client
