@@ -1,6 +1,6 @@
 """Embedding generation service"""
 
-from typing import List
+from typing import List, Optional
 import logging
 
 from sekha_llm_bridge.utils.llm_client import llm_client
@@ -37,7 +37,7 @@ class EmbeddingService:
             raise
 
     async def batch_generate_embeddings(
-        self, texts: List[str], model: str = None
+        self, texts: List[str], model: Optional[str] = None
     ) -> List[List[float]]:
         """Generate embeddings for multiple texts"""
         logger.info(f"Generating batch embeddings for {len(texts)} texts")

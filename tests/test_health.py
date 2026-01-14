@@ -11,8 +11,9 @@ async def test_health_endpoint():
     assert resp.status_code == 200
     data = resp.json()
     assert "status" in data
-    assert "redis" in data
-    assert "ollama" in data
+    assert "ollama_status" in data
+    assert "models_loaded" in data
+    assert "timestamp" in data
 
 
 client = TestClient(app)

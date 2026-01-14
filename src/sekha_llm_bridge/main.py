@@ -115,10 +115,13 @@ async def embed_text_root(request: EmbedRequest):
     """Root-level embedding endpoint"""
     try:
         embedding = await llm_client.generate_embedding(request.text, request.model)
+        # Estimate tokens (rough: 1 token ≈ 4 chars)
+        tokens_used = len(request.text) // 4
         return EmbedResponse(
             embedding=embedding,
             model=request.model or settings.embedding_model,
             dimension=len(embedding),
+            tokens_used=tokens_used,
         )
     except Exception as e:
         logger.error(f"Embedding generation failed: {e}")
@@ -143,11 +146,15 @@ async def summarize_messages_root(request: SummarizeRequest):
             [{"role": "user", "content": prompt}], request.model
         )
 
+        # Estimate tokens
+        tokens_used = (len(messages_str) + len(summary)) // 4
+
         return SummarizeResponse(
             summary=summary.strip(),
             level=request.level,
             model=request.model or settings.summarization_model,
             message_count=len(request.messages),
+            tokens_used=tokens_used,
         )
     except Exception as e:
         logger.error(f"Summarization failed: {e}")
@@ -270,7 +277,7 @@ async def chat_completions(request: ChatCompletionRequest):
             id=f"chatcmpl-{uuid.uuid4().hex[:8]}",
             object="chat.completion",
             created=int(time.time()),
-            model=request.model or settings.default_model,
+            model=request.model or settings.summarization_model,
             choices=[
                 ChatCompletionChoice(
                     index=0,

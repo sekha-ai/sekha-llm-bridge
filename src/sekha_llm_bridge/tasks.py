@@ -6,7 +6,7 @@ from .config import settings
 
 @celery_app.task(name="tasks.embed_text")
 def embed_text_task(text: str, model: str | None = None) -> list[float]:
-    model_name = model or settings.default_embed_model
+    model_name = model or settings.embedding_model
     # Use LiteLLM embeddings where supported; fall back to simple OpenAI format
     response = litellm.embedding(
         model=model_name,
@@ -20,7 +20,7 @@ def embed_text_task(text: str, model: str | None = None) -> list[float]:
 def summarize_messages_task(
     messages: List[str], level: str, model: str | None = None
 ) -> str:
-    model_name = model or settings.default_summarize_model
+    model_name = model or settings.summarization_model
     joined = "\n".join(messages)
 
     system_prompt = (
@@ -45,7 +45,7 @@ def summarize_messages_task(
 
 @celery_app.task(name="tasks.extract_entities")
 def extract_entities_task(text: str, model: str | None = None) -> list[dict]:
-    model_name = model or settings.default_summarize_model
+    model_name = model or settings.extraction_model
 
     system_prompt = (
         "Extract named entities from the text as JSON with fields: "
@@ -76,7 +76,7 @@ def extract_entities_task(text: str, model: str | None = None) -> list[dict]:
 
 @celery_app.task(name="tasks.score_importance")
 def score_importance_task(text: str, model: str | None = None) -> float:
-    model_name = model or settings.default_importance_model
+    model_name = model or settings.summarization_model
 
     system_prompt = (
         "You are an importance scoring assistant. "
