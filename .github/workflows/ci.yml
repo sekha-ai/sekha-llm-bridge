@@ -157,19 +157,6 @@ jobs:
           --health-timeout=5s
           --health-retries=5
 
-      chroma:
-        image: chromadb/chroma:latest
-        ports:
-          - 8000:8000
-        options: >-
-          -e IS_PERSISTENT=TRUE
-          -e ANONYMIZED_TELEMETRY=FALSE
-          --health-cmd="curl -f http://localhost:8000/api/v1/heartbeat || exit 1"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=5
-          --health-start-period=30s
-
     steps:
       - name: Checkout llm-bridge
         uses: actions/checkout@v4
