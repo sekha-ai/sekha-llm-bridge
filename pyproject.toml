@@ -2,7 +2,24 @@
 name = "sekha-llm-bridge"
 version = "0.1.0"
 description = "LLM Bridge Service for Sekha"
-authors = ["Sekha AI <dev@sekha.ai>"]
+authors = ["Sekha AI <dev@sekha-ai.dev>"]
+license = "AGPL-3.0-or-later"
+readme = "README.md"
+homepage = "https://sekha.dev"
+repository = "https://github.com/sekha-ai/sekha-llm-bridge"
+documentation = "https://docs.sekha.dev"
+readme = "README.md"
+keywords = ["ai", "llm", "embeddings", "memory", "ollama", "rag"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
 packages = [
     { include = "sekha_llm_bridge", from = "src" },
 ]
@@ -10,7 +27,7 @@ packages = [
 [tool.poetry.dependencies]
 python = "^3.11"
 fastapi = "^0.128.0"
-uvicorn = { extras = ["standard"], version = "^0.30.0" }
+uvicorn = { extras = ["standard"], version = "^0.40.0" }
 pydantic = "^2.9.0"
 pydantic-settings = "^2.5.2"
 litellm = "^1.80.16"
