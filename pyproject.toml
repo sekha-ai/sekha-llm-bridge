@@ -8,7 +8,6 @@ readme = "README.md"
 homepage = "https://sekha.dev"
 repository = "https://github.com/sekha-ai/sekha-llm-bridge"
 documentation = "https://docs.sekha.dev"
-readme = "README.md"
 keywords = ["ai", "llm", "embeddings", "memory", "ollama", "rag"]
 classifiers = [
     "Development Status :: 4 - Beta",
