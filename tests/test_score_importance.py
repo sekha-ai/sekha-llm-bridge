@@ -1,11 +1,11 @@
 import pytest
-from httpx import AsyncClient
+from httpx import AsyncClient, ASGITransport
 from sekha_llm_bridge.main import app
 
 
 @pytest.mark.asyncio
 async def test_score_importance_route_exists():
-    async with AsyncClient(app=app, base_url="http://test") as ac:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         resp = await ac.post(
             "/score_importance",
             json={"text": "Some important decision", "model": None},
