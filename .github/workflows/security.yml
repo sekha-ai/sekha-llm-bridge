@@ -13,6 +13,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+      # Safety CLI
+      - uses: actions/checkout@main
+      - name: Run Safety CLI to check for vulnerabilities
+        uses: pyupio/safety-action@v1
+        with:
+          api-key: ${{ secrets.SAFETY_API_KEY }}    
       
       # Rust security
       - name: Rust security audit
@@ -34,13 +40,6 @@ jobs:
       - name: npm audit
         if: hashFiles('package.json') != ''
         run: npm audit
-      
-      # Safety CLI
-      - uses: actions/checkout@main
-      - name: Run Safety CLI to check for vulnerabilities
-        uses: pyupio/safety-action@v1
-        with:
-          api-key: ${{ secrets.SAFETY_API_KEY }}    
       
       # Container security
       - name: Trivy scan
