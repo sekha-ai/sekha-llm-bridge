@@ -35,6 +35,13 @@ jobs:
           pip install safety bandit
           safety scan
           bandit -r . -f json -o bandit-report.json
+      - uses: actions/checkout@v6
+      # Safety CLI
+      - uses: actions/checkout@main
+      - name: Run Safety CLI to check for vulnerabilities
+        uses: pyupio/safety-action@v1
+        with:
+          api-key: ${{ secrets.SAFETY_API_KEY }}      
       
       # JavaScript security
       - name: npm audit
