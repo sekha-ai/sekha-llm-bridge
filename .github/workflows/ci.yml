@@ -157,19 +157,6 @@ jobs:
           --health-timeout=5s
           --health-retries=5
 
-      chroma:
-        image: chromadb/chroma:latest
-        ports:
-          - 8000:8000
-        options: >-
-          -e IS_PERSISTENT=TRUE
-          -e ANONYMIZED_TELEMETRY=FALSE
-          --health-cmd="curl -f http://localhost:8000/api/v1/heartbeat || exit 1"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=5
-          --health-start-period=30s
-
     steps:
       - name: Checkout llm-bridge
         uses: actions/checkout@v4
@@ -190,6 +177,36 @@ jobs:
 
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
+
+      - name: Clean up Docker resources
+        run: |
+          docker system prune -af --volumes || true
+
+      - name: Start Chroma
+        run: |
+          docker run -d \
+            --name chroma \
+            -p 8000:8000 \
+            -e IS_PERSISTENT=TRUE \
+            -e ANONYMIZED_TELEMETRY=FALSE \
+            chromadb/chroma:latest
+          
+          echo "Waiting for Chroma to be ready..."
+          for i in {1..30}; do
+            if curl -f http://localhost:8000/api/v1/heartbeat 2>/dev/null; then
+              echo "✅ Chroma is ready"
+              break
+            fi
+            echo "Waiting for Chroma... ($i/30)"
+            sleep 2
+          done
+          
+          # Final health check
+          if ! curl -f http://localhost:8000/api/v1/heartbeat; then
+            echo "❌ Chroma failed to start"
+            docker logs chroma
+            exit 1
+          fi
 
       - name: Start Ollama
         run: |
@@ -247,8 +264,8 @@ jobs:
           if [ ! -z "$CONTROLLER_PID" ]; then
             kill $CONTROLLER_PID || true
           fi
-          docker stop ollama || true
-          docker rm ollama || true
+          docker stop ollama chroma || true
+          docker rm ollama chroma || true
 
 
   security:
@@ -262,7 +279,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Install dependencies
         run: |
