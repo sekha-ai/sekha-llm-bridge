@@ -211,7 +211,7 @@ jobs:
                 break
               fi
             fi
-            echo "⏳ Waiting for Chroma... ($i/60)"
+            echo "⏳ Waiting for Chroma... ($i/30)"
             sleep 2
           done
           
@@ -227,7 +227,7 @@ jobs:
             --name ollama \
             -p 11434:11434 \
             ollama/ollama:latest
-          for i in {1..60}; do
+          for i in {1..30}; do
             if curl -f http://localhost:11434/api/tags; then
               echo "Ollama ready"
               break
