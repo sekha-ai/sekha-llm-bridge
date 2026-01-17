@@ -187,14 +187,13 @@ jobs:
           docker run -d \
             --name chroma \
             -p 8000:8000 \
-            -e IS_PERSISTENT=TRUE \
-            -e ANONYMIZED_TELEMETRY=FALSE \
-            -e ALLOW_RESET=TRUE \
+            -e ANONYMIZED_TELEMETRY=False \
+            -e ALLOW_RESET=True \
             ghcr.io/chroma-core/chroma:latest
           
           echo "Waiting for Chroma to be ready..."
           READY=false
-          for i in {1..60}; do
+          for i in {1..30}; do
             if curl -sf http://localhost:8000/api/v1/heartbeat; then
               echo "✅ Chroma heartbeat successful"
               # Verify we can actually create a collection
@@ -206,7 +205,7 @@ jobs:
                 break
               fi
             fi
-            echo "⏳ Waiting for Chroma... ($i/60)"
+            echo "⏳ Waiting for Chroma... ($i/30)"
             sleep 2
           done
           
@@ -222,7 +221,7 @@ jobs:
             --name ollama \
             -p 11434:11434 \
             ollama/ollama:latest
-          for i in {1..60}; do
+          for i in {1..30}; do
             if curl -f http://localhost:11434/api/tags; then
               echo "Ollama ready"
               break
