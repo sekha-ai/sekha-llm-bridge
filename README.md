@@ -1,14 +1,13 @@
 
 [![codecov](https://codecov.io/gh/sekha-ai/sekha-llm-bridge/branch/main/graph/badge.svg)](https://codecov.io/gh/sekha-ai/sekha-llm-bridge)
-[![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)\
 [![Python](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org)
 [![PyPI](https://img.shields.io/pypi/v/sekha-llm-bridge.svg)](https://pypi.org/project/sekha-llm-bridge/)
-
-[![CI](https://github.com/sekha-ai/sekha-llm-bridge/actions/workflows/ci.yml/badge.svg)](https://github.com/sekha-ai/sekha-llm-bridge/actions/workflows/ci.yml)
-[![codecov](https://codecov.io/gh/sekha-ai/sekha-llm-bridge/branch/main/graph/badge.svg?token=YOUR_TOKEN)](https://codecov.io/gh/sekha-ai/sekha-llm-bridge)
-[![PyPI version](https://badge.fury.io/py/sekha-llm-bridge.svg)](https://badge.fury.io/py/sekha-llm-bridge)
 [![Python Versions](https://img.shields.io/pypi/pyversions/sekha-llm-bridge.svg)](https://pypi.org/project/sekha-llm-bridge/)
+[![PyPI version](https://badge.fury.io/py/sekha-llm-bridge.svg)](https://badge.fury.io/py/sekha-llm-bridge)
+[![CI](https://github.com/sekha-ai/sekha-llm-bridge/workflows/LLM%20Bridge%20CI/badge.svg)](https://github.com/sekha-ai/sekha-llm-bridge/actions/workflows/ci.yml)
 [![Downloads](https://pepy.tech/badge/sekha-llm-bridge)](https://pepy.tech/project/sekha-llm-bridge)
+[![Docker](https://img.shields.io/docker/v/sekhaa/sekha-llm-bridge?label=docker)](https://ghcr.io/sekha-ai/sekha-llm-bridge)
 
 
 # Sekha LLM Bridge
