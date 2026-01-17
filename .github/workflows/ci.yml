@@ -189,21 +189,31 @@ jobs:
             -p 8000:8000 \
             -e IS_PERSISTENT=TRUE \
             -e ANONYMIZED_TELEMETRY=FALSE \
+            -e ALLOW_RESET=TRUE \
+            -e CHROMA_SERVER_AUTH_CREDENTIALS_PROVIDER=chromadb.auth.token_authn.TokenAuthenticationServerProvider \
+            -e CHROMA_SERVER_AUTH_TOKEN_TRANSPORT_HEADER=X-Chroma-Token \
             chromadb/chroma:latest
           
           echo "Waiting for Chroma to be ready..."
-          for i in {1..30}; do
-            if curl -f http://localhost:8000/api/v1/heartbeat 2>/dev/null; then
-              echo "✅ Chroma is ready"
-              break
+          READY=false
+          for i in {1..60}; do
+            if curl -sf http://localhost:8000/api/v1/heartbeat; then
+              echo "✅ Chroma heartbeat successful"
+              # Verify we can actually create a collection
+              if curl -sf -X POST http://localhost:8000/api/v1/collections \
+                -H "Content-Type: application/json" \
+                -d '{"name": "test_readiness"}' 2>/dev/null; then
+                echo "✅ Chroma is fully ready"
+                READY=true
+                break
+              fi
             fi
-            echo "Waiting for Chroma... ($i/30)"
+            echo "⏳ Waiting for Chroma... ($i/60)"
             sleep 2
           done
           
-          # Final health check
-          if ! curl -f http://localhost:8000/api/v1/heartbeat; then
-            echo "❌ Chroma failed to start"
+          if [ "$READY" = false ]; then
+            echo "❌ Chroma failed to become ready"
             docker logs chroma
             exit 1
           fi
