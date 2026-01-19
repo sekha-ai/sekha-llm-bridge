@@ -41,7 +41,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install ruff black mypy
+          pip install "black>=25.1.0,<26" "ruff>=0.9.5" "mypy>=1.14.1"
           pip install -r requirements.txt
           pip install -e .
 
@@ -157,6 +157,10 @@ jobs:
           --health-interval=10s
           --health-timeout=5s
           --health-retries=5
+      chroma:
+        image: chromadb/chroma:latest
+        ports:
+          - 8000:8000
 
     steps:
       - name: Checkout llm-bridge
@@ -182,32 +186,6 @@ jobs:
       - name: Clean up Docker resources
         run: |
           docker system prune -af --volumes || true
-
-      - name: Start Chroma
-        run: |
-          docker run -d \
-            --name chroma \
-            -p 8000:8000 \
-            -e IS_PERSISTENT=TRUE \
-            -e ANONYMIZED_TELEMETRY=FALSE \
-            -e ALLOW_RESET=TRUE \
-            ghcr.io/chroma-core/chroma:latest
-          
-          echo "Waiting for Chroma to be ready..."
-          for i in {1..60}; do
-            if curl -sf http://localhost:8000/api/v1/heartbeat; then
-              echo "✅ Chroma is ready"
-              break
-            fi
-            echo "⏳ Waiting for Chroma... ($i/60)"
-            sleep 2
-          done
-          
-          if [ "$READY" = false ]; then
-            echo "❌ Chroma failed to become ready"
-            docker logs chroma
-            exit 1
-          fi
 
       - name: Start Ollama
         run: |
@@ -266,8 +244,8 @@ jobs:
           if [ ! -z "$CONTROLLER_PID" ]; then
             kill $CONTROLLER_PID || true
           fi
-          docker stop ollama chroma || true
-          docker rm ollama chroma || true
+          docker stop ollama || true
+          docker rm ollama || true
 
 
   security:

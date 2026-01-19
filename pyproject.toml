@@ -46,8 +46,42 @@ pandas = "^2.3.3"
 scikit-learn = "^1.8.0"
 config = "^0.5.1"
 
+[tool.poetry.group.dev.dependencies]
+black = "^25.1.0"
+ruff = "^0.9.5"
+mypy = "^1.14.1"
+pytest-cov = "^6.0.0"
+
 [tool.poetry.scripts]
 llm-bridge = "sekha_llm_bridge.main:run"
+
+[tool.black]
+line-length = 88
+target-version = ["py311", "py312"]
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+)/
+'''
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
 
 [tool.coverage.run]
 omit = [
