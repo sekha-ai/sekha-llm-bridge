@@ -1,29 +1,52 @@
+# Multi-stage build for sekha-llm-bridge
+FROM python:3.11-slim AS builder
+
+WORKDIR /app
+
+# Install Poetry
+RUN pip install --no-cache-dir poetry==1.7.1
+
+# Configure Poetry
+RUN poetry config virtualenvs.create false
+
+# Copy dependency files
+COPY pyproject.toml poetry.lock ./
+
+# Install dependencies
+RUN poetry install --only main --no-interaction --no-ansi --no-root
+
+# Copy source code
+COPY . .
+
+# Install the project
+RUN poetry install --only-root --no-interaction --no-ansi
+
+# Runtime stage
 FROM python:3.14-slim
 
 WORKDIR /app
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
+# Install runtime system dependencies
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements and install
-COPY requirements.txt .
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
+# Copy installed packages
+COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --from=builder /usr/local/bin /usr/local/bin
 
 # Copy application code
-COPY src/ ./src/
+COPY --from=builder /app /app
 
-# Set PYTHONPATH so imports work
+# Create non-root user
+RUN useradd -m -u 1000 sekha && chown -R sekha:sekha /app
+USER sekha
+
+# Set Python path to include src
 ENV PYTHONPATH=/app/src
 
-# Expose port
 EXPOSE 5001
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=20s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
   CMD curl -f http://localhost:5001/health || exit 1
 
-# Run application using uvicorn directly
+# Use the correct module path
 CMD ["uvicorn", "sekha_llm_bridge.main:app", "--host", "0.0.0.0", "--port", "5001"]
