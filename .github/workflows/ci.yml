@@ -287,32 +287,37 @@ jobs:
     needs: [test, lint]
 
     steps:
-      - name: Build multi-platform
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build multi-platform image (cache only)
         uses: docker/build-push-action@v6
-        id: build
         with:
           context: .
           file: ./Dockerfile
           push: false
           tags: sekha-llm-bridge:test
-          platforms: linux/amd64,linux/arm64
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          outputs: type=image,push=false
+          platforms: linux/amd64,linux/arm64
 
-      - name: Load image for testing
-        run: |
-          # Build just for current platform and load
-          docker buildx build \
-            --platform linux/amd64 \
-            --tag sekha-llm-bridge:test \
-            --load \
-            --cache-from type=gha \
-            .
+      - name: Build single-platform for testing
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: false
+          load: true
+          tags: sekha-llm-bridge:test-local
+          cache-from: type=gha
+          platforms: linux/amd64  # Single platform for loading
 
       - name: Test image
         run: |
-          docker run --rm -d --name test-bridge sekha-llm-bridge:test
+          docker run --rm -d --name test-bridge sekha-llm-bridge:test-local
           sleep 5
           docker stop test-bridge || true
 
