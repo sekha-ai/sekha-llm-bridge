@@ -43,7 +43,7 @@ alembic = "^1.17.2"
 psycopg2-binary = "^2.9.11"
 python-dotenv = "^1.2.1"
 numpy = "^2.4.1"
-pandas = "^2.3.3"
+pandas = "^3.0.0"
 scikit-learn = "^1.8.0"
 config = "^0.5.1"
 
