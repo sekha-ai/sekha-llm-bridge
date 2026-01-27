@@ -37,26 +37,26 @@ The Controller (Rust) focuses on memory orchestration, storage, and retrieval. L
 
 ```
 ┌─────────────────────────────────────────┐
-│      Sekha Controller (Rust)             │
-│  • Memory Orchestration                  │
-│  • Context Assembly                      │
-│  • Storage (SQLite + Chroma)             │
+│      Sekha Controller (Rust)            │
+│  • Memory Orchestration                 │
+│  • Context Assembly                     │
+│  • Storage (SQLite + Chroma)            │
 └──────────────┬──────────────────────────┘
                │ HTTP Calls
                ▼
 ┌─────────────────────────────────────────┐
-│      LLM-Bridge (Python) ← YOU ARE HERE  │
-│  • Universal LLM Adapter                 │
-│  • Embedding Generation                  │
-│  • Summarization                         │
-│  • Entity Extraction                     │
-│  • Importance Scoring                    │
+│      LLM-Bridge (Python) ← YOU ARE HERE │
+│  • Universal LLM Adapter                │
+│  • Embedding Generation                 │
+│  • Summarization                        │
+│  • Entity Extraction                    │
+│  • Importance Scoring                   │
 └──────────────┬──────────────────────────┘
                │ LiteLLM
                ▼
     ┌──────────┴────────────┐
-    │                        │
-    ▼                        ▼
+    │                       │
+    ▼                       ▼
 ┌─────────┐            ┌──────────┐
 │ Ollama  │            │ OpenAI   │
 │ (Local) │            │ GPT-4    │
