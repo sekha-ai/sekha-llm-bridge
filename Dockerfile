@@ -29,6 +29,9 @@ WORKDIR /app
 # Install runtime system dependencies
 RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 
+# Copy Python shared libraries from builder
+COPY --from=builder /usr/local/lib/libpython3.13.so.1.0 /usr/local/lib/
+
 # Copy installed packages from builder (includes uvicorn and all dependencies)
 COPY --from=builder /usr/local/lib/python3.13/site-packages /usr/local/lib/python3.13/site-packages
 
@@ -41,6 +44,9 @@ USER sekha
 
 # Set Python path to include src
 ENV PYTHONPATH=/app/src
+
+# Ensure library path includes /usr/local/lib
+ENV LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
 
 EXPOSE 5001
 
