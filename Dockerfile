@@ -22,7 +22,7 @@ COPY . .
 RUN poetry install --only-root --no-interaction --no-ansi
 
 # Runtime stage
-FROM python:3.14-slim
+FROM python:3.13-slim
 
 WORKDIR /app
 
