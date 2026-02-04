@@ -37,6 +37,10 @@ from sekha_llm_bridge.services.entity_extraction_service import (
 )
 from sekha_llm_bridge.services.importance_scorer import importance_scorer_service
 
+# V2.0 routing (multi-provider support)
+from sekha_llm_bridge.routes_v2 import router as v2_router
+from sekha_llm_bridge.registry import registry
+
 # Configure logging
 logging.basicConfig(
     level=getattr(logging, settings.log_level.upper()),
@@ -48,14 +52,36 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup and shutdown events"""
-    logger.info("🚀 Starting Sekha LLM Bridge")
+    logger.info("🚀 Starting Sekha LLM Bridge v2.0")
 
-    # Check Ollama health on startup
-    health = await llm_client.health_check()
-    if health["status"] == "healthy":
-        logger.info(f"✅ Ollama is healthy: {health['models_available']}")
-    else:
-        logger.warning(f"⚠️ Ollama health check failed: {health.get('reason')}")
+    # Check provider health on startup
+    try:
+        health = registry.get_provider_health()
+        healthy_count = sum(
+            1 for p in health.values()
+            if p.get("circuit_breaker", {}).get("state") == "closed"
+        )
+        total_providers = len(health)
+        logger.info(
+            f"✅ {healthy_count}/{total_providers} providers healthy"
+        )
+        
+        # List available models
+        models = registry.list_all_models()
+        logger.info(f"📦 {len(models)} models available")
+        
+    except Exception as e:
+        logger.error(f"⚠️ Provider health check failed: {e}")
+
+    # Legacy Ollama health check (backward compatibility)
+    try:
+        health = await llm_client.health_check()
+        if health["status"] == "healthy":
+            logger.info(f"✅ Legacy Ollama client is healthy: {health['models_available']}")
+        else:
+            logger.warning(f"⚠️ Legacy Ollama health check failed: {health.get('reason')}")
+    except Exception as e:
+        logger.warning(f"Legacy Ollama client not available: {e}")
 
     yield
 
@@ -65,8 +91,8 @@ async def lifespan(app: FastAPI):
 # Create FastAPI app
 app = FastAPI(
     title="Sekha LLM Bridge",
-    description="LLM operations service for Project Sekha",
-    version="1.0.0",
+    description="Multi-provider LLM operations service for Project Sekha",
+    version="2.0.0",
     lifespan=lifespan,
 )
 
@@ -78,6 +104,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Include V2.0 routing endpoints
+app.include_router(v2_router)
 
 # Add Prometheus metrics
 metrics_app = make_asgi_app()
@@ -91,18 +120,27 @@ app.mount("/metrics", metrics_app)
 
 @app.get("/health", response_model=HealthResponse, tags=["Health"])
 async def health_check():
-    """Check service health and Ollama connectivity"""
-    ollama_status = await llm_client.health_check()
-
-    if ollama_status["status"] != "healthy":
-        raise HTTPException(status_code=503, detail="Ollama is not available")
-
-    return HealthResponse(
-        status="healthy",
-        timestamp=datetime.utcnow().isoformat(),
-        ollama_status=ollama_status,
-        models_loaded=ollama_status.get("models_available", []),
-    )
+    """Check service health and provider connectivity"""
+    try:
+        # Check v2.0 providers
+        provider_health = registry.get_provider_health()
+        healthy_count = sum(
+            1 for p in provider_health.values()
+            if p.get("circuit_breaker", {}).get("state") == "closed"
+        )
+        
+        # Also check legacy Ollama
+        ollama_status = await llm_client.health_check()
+        
+        return HealthResponse(
+            status="healthy" if healthy_count > 0 else "degraded",
+            timestamp=datetime.utcnow().isoformat(),
+            ollama_status=ollama_status,
+            models_loaded=registry.list_all_models(),
+        )
+    except Exception as e:
+        logger.error(f"Health check failed: {e}")
+        raise HTTPException(status_code=503, detail=str(e))
 
 
 # ============================================
@@ -318,9 +356,16 @@ async def root():
     """Root endpoint"""
     return {
         "service": "Sekha LLM Bridge",
-        "version": "1.0.0",
+        "version": "2.0.0",
         "docs": "/docs",
         "health": "/health",
+        "features": [
+            "Multi-provider support",
+            "Automatic routing",
+            "Cost estimation",
+            "Circuit breakers",
+            "Provider fallback",
+        ],
     }
 
 
