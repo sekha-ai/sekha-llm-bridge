@@ -1,10 +1,15 @@
 """Integration tests for v2.0 multi-provider functionality."""
 
 import pytest
-import asyncio
-from sekha_llm_bridge.config import Settings, LlmProviderConfig, ModelCapability, DefaultModels, ProviderType, ModelTask
+from sekha_llm_bridge.config import (
+    Settings,
+    LlmProviderConfig,
+    ModelCapability,
+    DefaultModels,
+    ProviderType,
+    ModelTask,
+)
 from sekha_llm_bridge.registry import ModelRegistry
-from sekha_llm_bridge.providers import ChatMessage, MessageRole
 from sekha_llm_bridge.pricing import estimate_cost, find_cheapest_model
 
 
@@ -46,21 +51,21 @@ class TestModelRegistry:
 
     def test_registry_initialization(self, test_config, monkeypatch):
         """Test registry initializes with providers."""
-        monkeypatch.setattr('sekha_llm_bridge.config.settings', test_config)
-        
+        monkeypatch.setattr("sekha_llm_bridge.config.settings", test_config)
+
         registry = ModelRegistry()
-        
+
         assert len(registry.providers) == 1
         assert "test_ollama" in registry.providers
         assert len(registry.model_cache) == 2
 
     def test_list_models(self, test_config, monkeypatch):
         """Test listing all models."""
-        monkeypatch.setattr('sekha_llm_bridge.config.settings', test_config)
-        
+        monkeypatch.setattr("sekha_llm_bridge.config.settings", test_config)
+
         registry = ModelRegistry()
         models = registry.list_all_models()
-        
+
         assert len(models) == 2
         model_ids = [m["model_id"] for m in models]
         assert "test-embed" in model_ids
@@ -69,14 +74,14 @@ class TestModelRegistry:
     @pytest.mark.asyncio
     async def test_routing_for_embedding(self, test_config, monkeypatch):
         """Test routing for embedding task."""
-        monkeypatch.setattr('sekha_llm_bridge.config.settings', test_config)
-        
+        monkeypatch.setattr("sekha_llm_bridge.config.settings", test_config)
+
         registry = ModelRegistry()
-        
+
         result = await registry.route_with_fallback(
             task=ModelTask.EMBEDDING,
         )
-        
+
         assert result.model_id == "test-embed"
         assert result.provider.provider_id == "test_ollama"
         assert result.estimated_cost == 0.0  # Local model is free
@@ -84,39 +89,39 @@ class TestModelRegistry:
     @pytest.mark.asyncio
     async def test_routing_for_chat(self, test_config, monkeypatch):
         """Test routing for chat task."""
-        monkeypatch.setattr('sekha_llm_bridge.config.settings', test_config)
-        
+        monkeypatch.setattr("sekha_llm_bridge.config.settings", test_config)
+
         registry = ModelRegistry()
-        
+
         result = await registry.route_with_fallback(
             task=ModelTask.CHAT_SMALL,
         )
-        
+
         assert result.model_id == "test-chat"
         assert result.provider.provider_id == "test_ollama"
 
     @pytest.mark.asyncio
     async def test_routing_with_preferred_model(self, test_config, monkeypatch):
         """Test routing respects preferred model."""
-        monkeypatch.setattr('sekha_llm_bridge.config.settings', test_config)
-        
+        monkeypatch.setattr("sekha_llm_bridge.config.settings", test_config)
+
         registry = ModelRegistry()
-        
+
         result = await registry.route_with_fallback(
             task=ModelTask.CHAT_SMALL,
             preferred_model="test-chat",
         )
-        
+
         assert result.model_id == "test-chat"
         assert "preferred" in result.reason.lower()
 
     def test_provider_health(self, test_config, monkeypatch):
         """Test provider health status."""
-        monkeypatch.setattr('sekha_llm_bridge.config.settings', test_config)
-        
+        monkeypatch.setattr("sekha_llm_bridge.config.settings", test_config)
+
         registry = ModelRegistry()
         health = registry.get_provider_health()
-        
+
         assert "test_ollama" in health
         assert health["test_ollama"]["models_count"] == 2
 
@@ -141,16 +146,16 @@ class TestCostEstimation:
         """Test finding cheapest model from list."""
         models = ["gpt-4o", "gpt-4o-mini", "llama3.1:8b"]
         cheapest = find_cheapest_model(models, 1000, 500)
-        
+
         assert cheapest == "llama3.1:8b"  # Free local model
 
     def test_find_cheapest_with_budget(self):
         """Test finding cheapest model within budget."""
         models = ["gpt-4o", "gpt-4o-mini", "llama3.1:8b"]
-        
+
         # Budget that excludes GPT-4o but allows GPT-4o-mini
         cheapest = find_cheapest_model(models, 1000, 500, max_cost=0.001)
-        
+
         # Should return free model or GPT-4o-mini depending on which is cheaper
         assert cheapest in ["llama3.1:8b", "gpt-4o-mini"]
 
@@ -163,19 +168,21 @@ class TestProviderIntegration:
     async def test_real_ollama_health(self):
         """Test health check against real Ollama instance."""
         from sekha_llm_bridge.providers import LiteLlmProvider
-        
+
         provider = LiteLlmProvider(
             provider_id="test",
             config={
                 "provider_type": "ollama",
                 "base_url": "http://localhost:11434",
                 "timeout": 30,
-                "models": [{"model_id": "test", "task": "chat", "context_window": 2048}],
+                "models": [
+                    {"model_id": "test", "task": "chat", "context_window": 2048}
+                ],
             },
         )
-        
+
         health = await provider.health_check()
-        
+
         # Should have status key
         assert "status" in health
         assert health["status"] in ["healthy", "unhealthy"]
@@ -185,7 +192,7 @@ class TestProviderIntegration:
     async def test_real_embedding(self):
         """Test embedding generation with real Ollama."""
         from sekha_llm_bridge.providers import LiteLlmProvider
-        
+
         provider = LiteLlmProvider(
             provider_id="test",
             config={
@@ -195,13 +202,13 @@ class TestProviderIntegration:
                 "models": [],
             },
         )
-        
+
         try:
             result = await provider.generate_embedding(
                 text="Test embedding",
                 model="nomic-embed-text",
             )
-            
+
             assert len(result.embedding) > 0
             assert result.dimension > 0
             assert result.model == "nomic-embed-text"
@@ -237,14 +244,14 @@ class TestConfigValidation:
                 chat_smart="test-model",
             ),
         )
-        
+
         # Should not raise
         config.validate_config()
 
     def test_invalid_config_no_providers(self):
         """Test validation fails without providers."""
         config = Settings(providers=[])
-        
+
         with pytest.raises(ValueError, match="No providers"):
             config.validate_config()
 
@@ -273,7 +280,7 @@ class TestConfigValidation:
                 chat_smart="model-a",
             ),
         )
-        
+
         with pytest.raises(ValueError, match="not found"):
             config.validate_config()
 

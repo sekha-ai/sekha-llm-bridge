@@ -58,18 +58,17 @@ async def lifespan(app: FastAPI):
     try:
         health = registry.get_provider_health()
         healthy_count = sum(
-            1 for p in health.values()
+            1
+            for p in health.values()
             if p.get("circuit_breaker", {}).get("state") == "closed"
         )
         total_providers = len(health)
-        logger.info(
-            f"✅ {healthy_count}/{total_providers} providers healthy"
-        )
-        
+        logger.info(f"✅ {healthy_count}/{total_providers} providers healthy")
+
         # List available models
         models = registry.list_all_models()
         logger.info(f"📦 {len(models)} models available")
-        
+
     except Exception as e:
         logger.error(f"⚠️ Provider health check failed: {e}")
 
@@ -77,9 +76,13 @@ async def lifespan(app: FastAPI):
     try:
         health = await llm_client.health_check()
         if health["status"] == "healthy":
-            logger.info(f"✅ Legacy Ollama client is healthy: {health['models_available']}")
+            logger.info(
+                f"✅ Legacy Ollama client is healthy: {health['models_available']}"
+            )
         else:
-            logger.warning(f"⚠️ Legacy Ollama health check failed: {health.get('reason')}")
+            logger.warning(
+                f"⚠️ Legacy Ollama health check failed: {health.get('reason')}"
+            )
     except Exception as e:
         logger.warning(f"Legacy Ollama client not available: {e}")
 
@@ -125,13 +128,14 @@ async def health_check():
         # Check v2.0 providers
         provider_health = registry.get_provider_health()
         healthy_count = sum(
-            1 for p in provider_health.values()
+            1
+            for p in provider_health.values()
             if p.get("circuit_breaker", {}).get("state") == "closed"
         )
-        
+
         # Also check legacy Ollama
         ollama_status = await llm_client.health_check()
-        
+
         return HealthResponse(
             status="healthy" if healthy_count > 0 else "degraded",
             timestamp=datetime.utcnow().isoformat(),
