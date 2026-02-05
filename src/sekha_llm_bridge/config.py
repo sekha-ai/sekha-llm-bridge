@@ -1,26 +1,24 @@
-"""Configuration management for Sekha LLM Bridge."""
+"""Configuration models for Sekha LLM Bridge."""
 
-from pydantic import Field, field_validator, ConfigDict
-from pydantic_settings import BaseSettings
-from typing import Optional, List
 from enum import Enum
-import logging
-
-logger = logging.getLogger(__name__)
+from typing import List, Optional
+from pydantic import BaseModel, Field, validator
+import os
+import yaml
 
 
 class ProviderType(str, Enum):
-    """Supported LLM provider types."""
+    """Supported provider types."""
 
     OLLAMA = "ollama"
-    LITELLM = "litellm"
-    OPENROUTER = "openrouter"
     OPENAI = "openai"
     ANTHROPIC = "anthropic"
+    OPENROUTER = "openrouter"
+    LITELLM = "litellm"
 
 
 class ModelTask(str, Enum):
-    """Task categories for model routing."""
+    """Model task types for routing."""
 
     EMBEDDING = "embedding"
     CHAT_SMALL = "chat_small"
@@ -30,276 +28,172 @@ class ModelTask(str, Enum):
     AUDIO = "audio"
 
 
-class ModelCapability(BaseSettings):
-    """Metadata about a model's capabilities."""
+class VisionCapabilities(BaseModel):
+    """Vision-specific capabilities and limits."""
 
-    model_config = ConfigDict(extra="forbid")
-
-    model_id: str
-    task: ModelTask
-    context_window: int
-    supports_vision: bool = False
-    supports_audio: bool = False
-    dimension: Optional[int] = None  # For embedding models
-
-
-class LlmProviderConfig(BaseSettings):
-    """Configuration for a single LLM provider."""
-
-    model_config = ConfigDict(extra="forbid")
-
-    id: str
-    provider_type: ProviderType = Field(..., alias="type")
-    base_url: str
-    api_key: Optional[str] = None
-    timeout_secs: int = Field(default=120, alias="timeout")
-    priority: int = 1
-    models: List[ModelCapability] = Field(default_factory=list)
-
-
-class DefaultModels(BaseSettings):
-    """Default model selections for common tasks."""
-
-    model_config = ConfigDict(extra="forbid")
-
-    embedding: str
-    chat_fast: str
-    chat_smart: str
-    chat_vision: Optional[str] = None
-
-
-class CircuitBreakerConfig(BaseSettings):
-    """Circuit breaker configuration."""
-
-    model_config = ConfigDict(extra="forbid")
-
-    failure_threshold: int = 3
-    timeout_secs: int = 60
-    success_threshold: int = 2
-
-
-class RoutingConfig(BaseSettings):
-    """Routing and fallback configuration."""
-
-    model_config = ConfigDict(extra="forbid")
-
-    auto_fallback: bool = True
-    require_vision_for_images: bool = True
-    max_cost_per_request: Optional[float] = None
-    circuit_breaker: CircuitBreakerConfig = Field(default_factory=CircuitBreakerConfig)
-
-
-class Settings(BaseSettings):
-    """LLM Bridge configuration with v2.0 multi-provider support."""
-
-    model_config = ConfigDict(
-        env_file=".env",
-        case_sensitive=False,
-        populate_by_name=True,
-        extra="allow",  # Allow extra fields for flexibility
+    max_images: int = Field(default=10, description="Maximum images per request")
+    max_image_size_mb: int = Field(default=20, description="Maximum image size in MB")
+    supported_formats: List[str] = Field(
+        default=["jpg", "jpeg", "png", "gif", "webp"],
+        description="Supported image formats"
     )
 
-    # Server configuration
-    host: str = "0.0.0.0"
-    port: int = 5001
-    workers: int = 4
 
-    # ==== V2.0 CONFIGURATION ====
-    config_version: Optional[str] = None
+class ModelConfig(BaseModel):
+    """Configuration for a single model."""
 
-    # Provider registry (v2.0)
-    providers: List[LlmProviderConfig] = Field(
-        default_factory=list, validation_alias="llm_providers"
+    model_id: str = Field(..., description="Model identifier (e.g., 'gpt-4o')")
+    task: ModelTask = Field(..., description="Primary task this model is optimized for")
+    context_window: int = Field(
+        default=8192, description="Context window size in tokens"
+    )
+    dimension: Optional[int] = Field(
+        None, description="Embedding dimension (for embedding models only)"
+    )
+    supports_vision: bool = Field(
+        default=False, description="Whether model supports vision/multimodal input"
+    )
+    supports_audio: bool = Field(
+        default=False, description="Whether model supports audio input"
+    )
+    supports_function_calling: bool = Field(
+        default=False, description="Whether model supports function calling"
+    )
+    vision_capabilities: Optional[VisionCapabilities] = Field(
+        None, description="Vision-specific capabilities (if supports_vision=True)"
     )
 
-    # Default model selections (v2.0)
-    default_models: Optional[DefaultModels] = None
-
-    # Routing configuration (v2.0)
-    routing: RoutingConfig = Field(default_factory=RoutingConfig)
-
-    # ==== DEPRECATED (v1.x) - Keep for backward compatibility ====
-    # These will be used for auto-migration if v2.0 config is not present
-    ollama_base_url: str = Field(
-        default="http://localhost:11434", validation_alias="OLLAMA_URL"
-    )
-    embedding_model: str = "nomic-embed-text"
-    summarization_model: str = "llama3.1:8b"
-    extraction_model: str = "llama3.1:8b"
-
-    # LiteLLM settings
-    litellm_verbose: bool = False
-    litellm_drop_params: bool = True
-
-    # Redis/Celery
-    redis_url: str = "redis://localhost:6379/0"
-    celery_broker_url: str = "redis://localhost:6379/0"
-    celery_result_backend: str = "redis://localhost:6379/1"
-
-    # Cloud provider API keys (optional)
-    openai_api_key: Optional[str] = None
-    anthropic_api_key: Optional[str] = None
-    openrouter_api_key: Optional[str] = None
-
-    # Monitoring
-    health_check_interval: int = 60
-    log_level: str = Field(default="INFO", validation_alias="LOG_LEVEL")
-
-    @field_validator("providers", mode="before")
-    @classmethod
-    def migrate_old_config(cls, v, info):
-        """Auto-migrate v1.x configuration to v2.0 format."""
-        # If providers list is empty or None, check if we should auto-migrate
-        if not v:
-            # Get other field values from validation context
-            data = info.data
-
-            # Check if old-style config exists
-            ollama_url = data.get("ollama_base_url", "http://localhost:11434")
-            embedding_model = data.get("embedding_model", "nomic-embed-text")
-            summarization_model = data.get("summarization_model", "llama3.1:8b")
-
-            # Only auto-migrate if we have old config and no new config
-            if ollama_url and not v:
-                logger.warning(
-                    "⚠️  Detected v1.x configuration. Auto-migrating to v2.0 format..."
-                )
-
-                # Create default Ollama provider from legacy config
-                migrated_provider = {
-                    "id": "ollama_migrated",
-                    "type": "ollama",
-                    "base_url": ollama_url,
-                    "api_key": None,
-                    "priority": 1,
-                    "models": [
-                        {
-                            "model_id": embedding_model,
-                            "task": "embedding",
-                            "context_window": 512,
-                            "dimension": 768,
-                        },
-                        {
-                            "model_id": summarization_model,
-                            "task": "chat_small",
-                            "context_window": 8192,
-                        },
-                        {
-                            "model_id": summarization_model,
-                            "task": "chat_smart",
-                            "context_window": 8192,
-                        },
-                    ],
-                }
-
-                logger.info(
-                    "✅ Auto-migrated Ollama configuration. "
-                    "Please update to v2.0 config format for additional providers."
-                )
-
-                return [migrated_provider]
-
-        return v or []
-
-    @field_validator("default_models", mode="before")
-    @classmethod
-    def set_default_models(cls, v, info):
-        """Set default models if not specified but providers exist."""
-        if v is None:
-            data = info.data
-            providers = data.get("providers", [])
-
-            # If we have providers but no default models, infer them
-            if providers:
-                embedding_model = data.get("embedding_model", "nomic-embed-text")
-                summarization_model = data.get("summarization_model", "llama3.1:8b")
-
-                return {
-                    "embedding": embedding_model,
-                    "chat_fast": summarization_model,
-                    "chat_smart": summarization_model,
-                }
-
+    @validator("vision_capabilities", always=True)
+    def set_vision_defaults(cls, v, values):
+        """Set default vision capabilities if model supports vision."""
+        if values.get("supports_vision") and v is None:
+            return VisionCapabilities()
         return v
 
-    def validate_config(self) -> None:
-        """Validate the configuration after loading."""
-        if not self.providers:
-            raise ValueError(
-                "No providers configured. Add at least one provider to llm_providers."
-            )
+    @validator("dimension")
+    def validate_dimension(cls, v, values):
+        """Validate that dimension is set for embedding models."""
+        if values.get("task") == ModelTask.EMBEDDING and v is None:
+            raise ValueError("dimension is required for embedding models")
+        return v
 
-        if not self.default_models:
-            raise ValueError("default_models must be specified when using providers.")
 
-        # Validate that default models exist in some provider
-        all_model_ids = [
-            model.model_id for provider in self.providers for model in provider.models
-        ]
+class ProviderConfig(BaseModel):
+    """Configuration for a single LLM provider."""
 
-        if self.default_models.embedding not in all_model_ids:
-            raise ValueError(
-                f"Default embedding model '{self.default_models.embedding}' "
-                f"not found in any provider"
-            )
+    id: str = Field(..., description="Unique provider identifier")
+    provider_type: ProviderType = Field(..., description="Type of provider")
+    base_url: str = Field(..., description="Base URL for provider API")
+    api_key: Optional[str] = Field(None, description="API key for authentication")
+    priority: int = Field(
+        default=1,
+        description="Provider priority (lower number = higher priority)",
+        ge=1,
+        le=100,
+    )
+    timeout_secs: int = Field(default=120, description="Request timeout in seconds")
+    models: List[ModelConfig] = Field(
+        ..., description="List of models available from this provider"
+    )
 
-        if self.default_models.chat_fast not in all_model_ids:
-            raise ValueError(
-                f"Default chat_fast model '{self.default_models.chat_fast}' "
-                f"not found in any provider"
-            )
+    @validator("api_key", always=True)
+    def expand_env_vars(cls, v):
+        """Expand environment variables in API key (e.g., ${OPENAI_API_KEY})."""
+        if v and v.startswith("${") and v.endswith("}"):
+            env_var = v[2:-1]
+            return os.getenv(env_var)
+        return v
 
-        if self.default_models.chat_smart not in all_model_ids:
-            raise ValueError(
-                f"Default chat_smart model '{self.default_models.chat_smart}' "
-                f"not found in any provider"
-            )
 
-        # Check for duplicate provider IDs
-        provider_ids = [p.id for p in self.providers]
-        if len(provider_ids) != len(set(provider_ids)):
-            raise ValueError("Duplicate provider IDs found in configuration")
+class DefaultModels(BaseModel):
+    """Default model preferences."""
 
-        logger.info(
-            f"✅ Configuration validated: {len(self.providers)} provider(s) configured"
-        )
+    embedding: Optional[str] = Field(None, description="Default embedding model")
+    chat_fast: Optional[str] = Field(None, description="Fast chat model (cheap)")
+    chat_smart: Optional[str] = Field(None, description="Smart chat model (expensive)")
+    chat_vision: Optional[str] = Field(None, description="Vision-capable chat model")
+
+
+class CircuitBreakerConfig(BaseModel):
+    """Circuit breaker configuration."""
+
+    failure_threshold: int = Field(
+        default=3, description="Failures before opening circuit"
+    )
+    timeout_secs: int = Field(
+        default=60, description="Time to wait before trying again"
+    )
+    success_threshold: int = Field(
+        default=2, description="Successes needed to close circuit"
+    )
+
+
+class RoutingConfig(BaseModel):
+    """Request routing configuration."""
+
+    auto_fallback: bool = Field(
+        default=True, description="Automatically fallback to other providers on failure"
+    )
+    require_vision_for_images: bool = Field(
+        default=True,
+        description="Require vision-capable models when images are detected"
+    )
+    max_cost_per_request: Optional[float] = Field(
+        None, description="Maximum cost per request in USD"
+    )
+    circuit_breaker: CircuitBreakerConfig = Field(
+        default_factory=CircuitBreakerConfig, description="Circuit breaker settings"
+    )
+
+
+class Settings(BaseModel):
+    """Complete application settings."""
+
+    version: str = Field(default="2.0", description="Configuration version")
+    providers: List[ProviderConfig] = Field(
+        ..., description="List of configured providers"
+    )
+    default_models: DefaultModels = Field(
+        default_factory=DefaultModels, description="Default model preferences"
+    )
+    routing: RoutingConfig = Field(
+        default_factory=RoutingConfig, description="Routing configuration"
+    )
+
+    # Server settings
+    server_host: str = Field(default="0.0.0.0", description="Server host")
+    server_port: int = Field(default=5001, description="Server port")
+    max_connections: int = Field(default=10, description="Max concurrent connections")
+    log_level: str = Field(default="info", description="Logging level")
+
+    @validator("providers")
+    def validate_providers(cls, v):
+        """Validate that at least one provider is configured."""
+        if not v:
+            raise ValueError("At least one provider must be configured")
+        return v
+
+    @classmethod
+    def from_yaml(cls, config_path: str) -> "Settings":
+        """Load settings from YAML file."""
+        with open(config_path, "r") as f:
+            config_dict = yaml.safe_load(f)
+        return cls(**config_dict)
 
 
 # Global settings instance
-try:
-    settings = Settings()
-    # Validate after loading
-    if settings.providers:  # Only validate if v2.0 config exists
-        settings.validate_config()
-except Exception as e:
-    logger.error(f"Failed to load configuration: {e}")
-    # Fall back to defaults for development
-    settings = Settings(
-        providers=[
-            LlmProviderConfig(
-                id="ollama_default",
-                provider_type=ProviderType.OLLAMA,
-                base_url="http://localhost:11434",
-                priority=1,
-                models=[
-                    ModelCapability(
-                        model_id="nomic-embed-text",
-                        task=ModelTask.EMBEDDING,
-                        context_window=512,
-                        dimension=768,
-                    ),
-                    ModelCapability(
-                        model_id="llama3.1:8b",
-                        task=ModelTask.CHAT_SMALL,
-                        context_window=8192,
-                    ),
-                ],
-            )
-        ],
-        default_models=DefaultModels(
-            embedding="nomic-embed-text",
-            chat_fast="llama3.1:8b",
-            chat_smart="llama3.1:8b",
-        ),
-    )
-    logger.warning("⚠️  Using default configuration")
+settings: Optional[Settings] = None
+
+
+def load_settings(config_path: str = "config.yaml") -> Settings:
+    """Load and validate settings from config file."""
+    global settings
+    settings = Settings.from_yaml(config_path)
+    return settings
+
+
+def get_settings() -> Settings:
+    """Get current settings instance."""
+    if settings is None:
+        raise RuntimeError("Settings not loaded. Call load_settings() first.")
+    return settings
