@@ -42,6 +42,7 @@ class LiteLlmProvider(LlmProvider):
                 - base_url: API base URL
                 - api_key: Optional API key
                 - timeout: Request timeout in seconds
+                - models: List of model configurations
         """
         super().__init__(provider_id, config)
 
@@ -274,15 +275,36 @@ class LiteLlmProvider(LlmProvider):
             ) from e
 
     async def list_models(self) -> List[ModelInfo]:
-        """List available models.
-
-        Note: This is a basic implementation. For production,
-        you'd want to query the provider's API for available models.
+        """List available models from configuration.
+        
+        Returns models that were configured for this provider.
+        For dynamic model discovery, providers should implement
+        their own API queries (e.g., Ollama's /api/tags endpoint).
+        
+        Returns:
+            List of ModelInfo objects from configuration
         """
-        # For now, return empty list
-        # In a full implementation, this would query the provider
-        logger.warning(f"list_models not fully implemented for {self.provider_id}")
-        return []
+        models = []
+        
+        for model_config in self.config.get("models", []):
+            model_info = ModelInfo(
+                model_id=model_config["model_id"],
+                provider_id=self.provider_id,
+                display_name=model_config.get("display_name"),
+                context_window=model_config.get("context_window"),
+                supports_vision=model_config.get("supports_vision", False),
+                supports_audio=model_config.get("supports_audio", False),
+                supports_function_calling=model_config.get("supports_function_calling", False),
+                dimension=model_config.get("dimension"),
+                metadata={
+                    "task": model_config.get("task"),
+                    "provider_type": self._provider_type,
+                },
+            )
+            models.append(model_info)
+        
+        logger.debug(f"Listing {len(models)} configured models for {self.provider_id}")
+        return models
 
     async def health_check(self) -> Dict[str, Any]:
         """Check provider health."""
