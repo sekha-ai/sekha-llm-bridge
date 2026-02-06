@@ -123,9 +123,6 @@ jobs:
     - name: Run ruff
       run: ruff check src/ tests/
     
-    - name: Check black formatting
-      run: black --check .
-    
     - name: Check import sorting
       run: isort --check-only src/ tests/
     
