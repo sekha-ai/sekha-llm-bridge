@@ -70,7 +70,9 @@ async def test_daily_summarization():
     ) as mock_llm:
         mock_llm.return_value = "Test summary of the conversation"
 
-        request = SummarizeRequest(messages=["Message 1", "Message 2"], level="daily")
+        request = SummarizeRequest(
+            messages=["Message 1", "Message 2"], level="daily"
+        )
         response = await summarization_service.generate_summary(request)
 
         assert response.summary == "Test summary of the conversation"
