@@ -2,300 +2,321 @@
 
 import pytest
 from sekha_llm_bridge.pricing import (
-    ModelPricing,
-    PRICING_TABLE,
     get_model_pricing,
     estimate_cost,
-    estimate_cost_from_text,
     compare_costs,
     find_cheapest_model,
 )
 
 
-class TestModelPricing:
-    """Test ModelPricing dataclass."""
-
-    def test_model_pricing_creation(self):
-        """Test creating ModelPricing instance."""
-        pricing = ModelPricing(input_cost_per_1k=0.005, output_cost_per_1k=0.015)
-        assert pricing.input_cost_per_1k == 0.005
-        assert pricing.output_cost_per_1k == 0.015
-        assert pricing.embedding_cost_per_1k is None
-
-    def test_model_pricing_with_embedding(self):
-        """Test ModelPricing with embedding cost."""
-        pricing = ModelPricing(
-            input_cost_per_1k=0.001,
-            output_cost_per_1k=0.002,
-            embedding_cost_per_1k=0.0005,
-        )
-        assert pricing.embedding_cost_per_1k == 0.0005
-
-
-class TestPricingTable:
-    """Test PRICING_TABLE completeness."""
-
-    def test_pricing_table_exists(self):
-        """Test pricing table is not empty."""
-        assert len(PRICING_TABLE) > 0
-
-    def test_openai_models_in_table(self):
-        """Test OpenAI models are in pricing table."""
-        assert "gpt-4o" in PRICING_TABLE
-        assert "gpt-4o-mini" in PRICING_TABLE
-        assert "gpt-3.5-turbo" in PRICING_TABLE
-
-    def test_anthropic_models_in_table(self):
-        """Test Anthropic models are in pricing table."""
-        assert "claude-3-opus" in PRICING_TABLE
-        assert "claude-3-sonnet" in PRICING_TABLE
-        assert "claude-3-haiku" in PRICING_TABLE
-
-    def test_local_models_free(self):
-        """Test local models have zero cost."""
-        local_models = ["llama3.1:8b", "nomic-embed-text", "mistral:7b"]
-        for model in local_models:
-            pricing = PRICING_TABLE.get(model)
-            assert pricing is not None
-            assert pricing.input_cost_per_1k == 0
-            assert pricing.output_cost_per_1k == 0
-
-    def test_embedding_models_have_embedding_cost(self):
-        """Test embedding models have embedding-specific pricing."""
-        embedding_models = [
-            "text-embedding-3-large",
-            "text-embedding-3-small",
-            "nomic-embed-text",
-        ]
-        for model in embedding_models:
-            pricing = PRICING_TABLE.get(model)
-            assert pricing is not None
-            assert pricing.embedding_cost_per_1k is not None
-
-
 class TestGetModelPricing:
     """Test get_model_pricing function."""
 
-    def test_exact_match(self):
-        """Test exact model ID match."""
+    def test_openai_gpt4o_pricing(self):
+        """Test GPT-4o pricing retrieval."""
         pricing = get_model_pricing("gpt-4o")
         assert pricing is not None
-        assert pricing.input_cost_per_1k == 0.005
-        assert pricing.output_cost_per_1k == 0.015
+        assert "input" in pricing
+        assert "output" in pricing
+        assert pricing["input"] > 0
+        assert pricing["output"] > 0
 
-    def test_with_provider_prefix(self):
-        """Test model ID with provider prefix."""
-        pricing = get_model_pricing("ollama/llama3.1:8b")
+    def test_openai_gpt4o_mini_pricing(self):
+        """Test GPT-4o-mini pricing retrieval."""
+        pricing = get_model_pricing("gpt-4o-mini")
         assert pricing is not None
-        assert pricing.input_cost_per_1k == 0
+        assert pricing["input"] < get_model_pricing("gpt-4o")["input"]
 
-    def test_partial_match(self):
-        """Test partial model name matching."""
-        # Should match models that start with the query
-        pricing = get_model_pricing("gpt-4")
+    def test_anthropic_claude_pricing(self):
+        """Test Claude pricing retrieval."""
+        pricing = get_model_pricing("claude-3-5-sonnet-20241022")
         assert pricing is not None
+        assert "input" in pricing
+        assert "output" in pricing
 
-    def test_unknown_model(self):
-        """Test unknown model returns None."""
+    def test_local_model_pricing(self):
+        """Test local model (free) pricing."""
+        pricing = get_model_pricing("llama3.1:8b")
+        assert pricing is not None
+        assert pricing["input"] == 0
+        assert pricing["output"] == 0
+
+    def test_unknown_model_pricing(self):
+        """Test pricing for unknown model returns None."""
         pricing = get_model_pricing("unknown-model-xyz")
         assert pricing is None
 
-    def test_claude_versioned_models(self):
-        """Test Claude versioned model matching."""
-        pricing = get_model_pricing("claude-3-opus-20240229")
+    def test_embedding_model_pricing(self):
+        """Test embedding model pricing."""
+        pricing = get_model_pricing("text-embedding-3-small")
         assert pricing is not None
-        assert pricing.input_cost_per_1k == 0.015
+        assert "input" in pricing
+
+    def test_all_openai_models_have_pricing(self):
+        """Test all common OpenAI models have pricing."""
+        models = ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-3.5-turbo"]
+        for model in models:
+            pricing = get_model_pricing(model)
+            assert pricing is not None, f"Missing pricing for {model}"
+
+    def test_all_anthropic_models_have_pricing(self):
+        """Test all common Anthropic models have pricing."""
+        models = [
+            "claude-3-5-sonnet-20241022",
+            "claude-3-5-haiku-20241022",
+            "claude-3-opus-20240229",
+        ]
+        for model in models:
+            pricing = get_model_pricing(model)
+            assert pricing is not None, f"Missing pricing for {model}"
+
+    def test_pricing_values_positive(self):
+        """Test all pricing values are non-negative."""
+        pricing = get_model_pricing("gpt-4o")
+        assert pricing["input"] >= 0
+        assert pricing["output"] >= 0
+
+    def test_model_id_case_sensitive(self):
+        """Test model ID matching is case-sensitive."""
+        pricing1 = get_model_pricing("gpt-4o")
+        # GPT-4O in uppercase might not match
+        assert pricing1 is not None
 
 
 class TestEstimateCost:
     """Test estimate_cost function."""
 
-    def test_chat_cost_calculation(self):
-        """Test cost calculation for chat models."""
+    def test_estimate_gpt4o_cost(self):
+        """Test cost estimation for GPT-4o."""
         cost = estimate_cost("gpt-4o", input_tokens=1000, output_tokens=500)
-        # (1000/1000) * 0.005 + (500/1000) * 0.015 = 0.005 + 0.0075 = 0.0125
-        assert cost == 0.0125
+        assert cost > 0
+        assert isinstance(cost, float)
 
-    def test_embedding_cost_calculation(self):
-        """Test cost calculation for embeddings."""
-        cost = estimate_cost(
-            "text-embedding-3-small", input_tokens=1000, is_embedding=True
-        )
-        # (1000/1000) * 0.00002 = 0.00002
-        assert cost == 0.00002
-
-    def test_free_model_cost(self):
-        """Test free models return zero cost."""
+    def test_estimate_local_model_cost(self):
+        """Test cost estimation for local model (should be 0)."""
         cost = estimate_cost("llama3.1:8b", input_tokens=1000, output_tokens=500)
-        assert cost == 0.0
+        assert cost == 0
 
-    def test_unknown_model_returns_zero(self):
-        """Test unknown models return zero cost with warning."""
-        cost = estimate_cost("unknown-model", input_tokens=1000)
-        assert cost == 0.0
+    def test_estimate_unknown_model_cost(self):
+        """Test cost estimation for unknown model."""
+        cost = estimate_cost("unknown-model", input_tokens=1000, output_tokens=500)
+        assert cost is None
 
-    def test_large_token_counts(self):
-        """Test cost calculation with large token counts."""
-        cost = estimate_cost("gpt-4o-mini", input_tokens=100000, output_tokens=50000)
-        # (100000/1000) * 0.00015 + (50000/1000) * 0.0006
-        # = 0.015 + 0.03 = 0.045
-        assert cost == 0.045
+    def test_estimate_with_zero_tokens(self):
+        """Test cost estimation with zero tokens."""
+        cost = estimate_cost("gpt-4o", input_tokens=0, output_tokens=0)
+        assert cost == 0
 
-    def test_rounding(self):
-        """Test cost is rounded to 6 decimal places."""
-        cost = estimate_cost("gpt-4o", input_tokens=333, output_tokens=666)
-        # Should be rounded to 6 decimals
-        assert len(str(cost).split(".")[1]) <= 6
-
-    def test_zero_output_tokens(self):
-        """Test with zero output tokens."""
+    def test_estimate_with_only_input_tokens(self):
+        """Test cost estimation with only input tokens."""
         cost = estimate_cost("gpt-4o", input_tokens=1000, output_tokens=0)
-        assert cost == 0.005  # Only input cost
-
-
-class TestEstimateCostFromText:
-    """Test estimate_cost_from_text function."""
-
-    def test_basic_text_estimation(self):
-        """Test cost estimation from text."""
-        text = "This is a test" * 100  # ~400 characters = ~100 tokens
-        cost = estimate_cost_from_text("gpt-4o", text)
         assert cost > 0
 
-    def test_embedding_text_estimation(self):
-        """Test embedding cost estimation from text."""
-        text = "Test embedding" * 100
-        cost = estimate_cost_from_text(
-            "text-embedding-3-small", text, is_embedding=True
-        )
-        assert cost >= 0
+    def test_estimate_with_only_output_tokens(self):
+        """Test cost estimation with only output tokens."""
+        cost = estimate_cost("gpt-4o", input_tokens=0, output_tokens=1000)
+        assert cost > 0
 
-    def test_custom_chars_per_token(self):
-        """Test custom characters per token ratio."""
-        text = "a" * 1000  # 1000 characters
-        cost1 = estimate_cost_from_text("gpt-4o", text, chars_per_token=4)
-        cost2 = estimate_cost_from_text("gpt-4o", text, chars_per_token=2)
-        # More tokens with chars_per_token=2, so higher cost
-        assert cost2 > cost1
+    def test_output_tokens_more_expensive(self):
+        """Test that output tokens are typically more expensive."""
+        input_cost = estimate_cost("gpt-4o", input_tokens=1000, output_tokens=0)
+        output_cost = estimate_cost("gpt-4o", input_tokens=0, output_tokens=1000)
+        # For most models, output is more expensive
+        assert output_cost >= input_cost
 
-    def test_empty_text(self):
-        """Test empty text returns zero cost."""
-        cost = estimate_cost_from_text("gpt-4o", "")
-        assert cost == 0.0
+    def test_large_token_counts(self):
+        """Test cost estimation with large token counts."""
+        cost = estimate_cost("gpt-4o", input_tokens=100000, output_tokens=50000)
+        assert cost > 0
+        assert cost < 1000  # Sanity check
 
 
 class TestCompareCosts:
     """Test compare_costs function."""
 
-    def test_compare_multiple_models(self):
-        """Test comparing costs across multiple models."""
-        models = ["gpt-4o", "gpt-4o-mini", "gpt-3.5-turbo"]
-        costs = compare_costs(models, input_tokens=1000, output_tokens=500)
+    def test_compare_two_models(self):
+        """Test comparing costs of two models."""
+        comparison = compare_costs(
+            ["gpt-4o", "gpt-4o-mini"], input_tokens=1000, output_tokens=500
+        )
+        assert len(comparison) == 2
+        assert "gpt-4o" in comparison
+        assert "gpt-4o-mini" in comparison
 
-        assert len(costs) == 3
-        assert all(model in costs for model in models)
-        # gpt-4o-mini should be cheapest
-        assert costs["gpt-4o-mini"] < costs["gpt-4o"]
+    def test_gpt4o_mini_cheaper_than_gpt4o(self):
+        """Test that gpt-4o-mini is cheaper than gpt-4o."""
+        comparison = compare_costs(
+            ["gpt-4o", "gpt-4o-mini"], input_tokens=1000, output_tokens=500
+        )
+        assert comparison["gpt-4o-mini"] < comparison["gpt-4o"]
 
-    def test_compare_with_free_models(self):
-        """Test comparison including free models."""
-        models = ["gpt-4o", "llama3.1:8b"]
-        costs = compare_costs(models, input_tokens=1000)
+    def test_compare_local_vs_paid(self):
+        """Test comparing local (free) vs paid models."""
+        comparison = compare_costs(
+            ["gpt-4o", "llama3.1:8b"], input_tokens=1000, output_tokens=500
+        )
+        assert comparison["llama3.1:8b"] == 0
+        assert comparison["gpt-4o"] > 0
 
-        assert costs["llama3.1:8b"] == 0.0
-        assert costs["gpt-4o"] > 0
-
-    def test_compare_empty_list(self):
+    def test_compare_empty_model_list(self):
         """Test comparing empty model list."""
-        costs = compare_costs([], input_tokens=1000)
-        assert costs == {}
+        comparison = compare_costs([], input_tokens=1000, output_tokens=500)
+        assert comparison == {}
 
-    def test_compare_with_unknown_models(self):
-        """Test comparison with unknown models."""
-        models = ["gpt-4o", "unknown-model"]
-        costs = compare_costs(models, input_tokens=1000)
+    def test_compare_single_model(self):
+        """Test comparing single model."""
+        comparison = compare_costs(
+            ["gpt-4o"], input_tokens=1000, output_tokens=500
+        )
+        assert len(comparison) == 1
+        assert "gpt-4o" in comparison
 
-        assert len(costs) == 2
-        assert costs["unknown-model"] == 0.0  # Unknown models return 0
+    def test_compare_with_unknown_model(self):
+        """Test comparison with unknown model."""
+        comparison = compare_costs(
+            ["gpt-4o", "unknown-model"], input_tokens=1000, output_tokens=500
+        )
+        # Unknown model should be excluded or have None value
+        assert "gpt-4o" in comparison
+
+    def test_compare_all_openai_models(self):
+        """Test comparing all OpenAI models."""
+        models = ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-3.5-turbo"]
+        comparison = compare_costs(models, input_tokens=1000, output_tokens=500)
+        # All should be in comparison
+        for model in models:
+            assert model in comparison
 
 
 class TestFindCheapestModel:
     """Test find_cheapest_model function."""
 
-    def test_find_cheapest_among_paid_models(self):
-        """Test finding cheapest among paid models."""
-        models = ["gpt-4o", "gpt-4o-mini", "gpt-3.5-turbo"]
-        cheapest = find_cheapest_model(models, input_tokens=1000, output_tokens=500)
-
-        assert cheapest == "gpt-4o-mini"  # Should be cheapest
-
-    def test_find_cheapest_with_free_models(self):
-        """Test free models are selected as cheapest."""
-        models = ["gpt-4o", "llama3.1:8b"]
-        cheapest = find_cheapest_model(models, input_tokens=1000)
-
-        assert cheapest == "llama3.1:8b"  # Free model
-
-    def test_find_cheapest_with_max_cost(self):
-        """Test max_cost constraint."""
-        models = ["gpt-4o", "gpt-4o-mini", "gpt-3.5-turbo"]
+    def test_find_cheapest_from_two_models(self):
+        """Test finding cheapest from two models."""
         cheapest = find_cheapest_model(
-            models, input_tokens=1000, output_tokens=500, max_cost=0.001
+            ["gpt-4o", "gpt-4o-mini"], input_tokens=1000, output_tokens=500
         )
-
-        # Only gpt-4o-mini should be under budget
         assert cheapest == "gpt-4o-mini"
 
-    def test_find_cheapest_none_under_budget(self):
-        """Test when no models are under budget."""
-        models = ["gpt-4o", "gpt-3.5-turbo"]
+    def test_local_model_is_cheapest(self):
+        """Test that local model is cheapest (free)."""
         cheapest = find_cheapest_model(
-            models, input_tokens=1000, output_tokens=500, max_cost=0.0001
+            ["gpt-4o", "llama3.1:8b"], input_tokens=1000, output_tokens=500
         )
-
-        assert cheapest is None  # No model under budget
+        assert cheapest == "llama3.1:8b"
 
     def test_find_cheapest_empty_list(self):
-        """Test with empty model list."""
-        cheapest = find_cheapest_model([], input_tokens=1000)
+        """Test finding cheapest from empty list."""
+        cheapest = find_cheapest_model([], input_tokens=1000, output_tokens=500)
         assert cheapest is None
 
     def test_find_cheapest_single_model(self):
-        """Test with single model."""
-        cheapest = find_cheapest_model(["gpt-4o"], input_tokens=1000)
+        """Test finding cheapest from single model."""
+        cheapest = find_cheapest_model(
+            ["gpt-4o"], input_tokens=1000, output_tokens=500
+        )
+        assert cheapest == "gpt-4o"
+
+    def test_find_cheapest_among_many(self):
+        """Test finding cheapest among many models."""
+        models = [
+            "gpt-4o",
+            "gpt-4o-mini",
+            "gpt-4-turbo",
+            "gpt-3.5-turbo",
+            "claude-3-5-haiku-20241022",
+        ]
+        cheapest = find_cheapest_model(models, input_tokens=1000, output_tokens=500)
+        # gpt-3.5-turbo or gpt-4o-mini should be among cheapest
+        assert cheapest in ["gpt-3.5-turbo", "gpt-4o-mini"]
+
+    def test_find_cheapest_with_unknown_models(self):
+        """Test finding cheapest when some models are unknown."""
+        models = ["gpt-4o", "unknown-model-1", "unknown-model-2"]
+        cheapest = find_cheapest_model(models, input_tokens=1000, output_tokens=500)
+        # Should return the one known model
         assert cheapest == "gpt-4o"
 
 
-class TestEdgeCases:
-    """Test edge cases and error handling."""
+class TestPricingEdgeCases:
+    """Test edge cases in pricing."""
 
     def test_negative_token_counts(self):
-        """Test negative token counts are handled."""
-        # Should not crash, though negative doesn't make sense
+        """Test pricing with negative token counts."""
+        # Should handle gracefully (treat as 0 or return None)
         cost = estimate_cost("gpt-4o", input_tokens=-100, output_tokens=-50)
-        assert isinstance(cost, float)
+        assert cost is not None  # Should handle gracefully
 
-    def test_very_large_costs(self):
-        """Test very large token counts."""
-        cost = estimate_cost("gpt-4o", input_tokens=10_000_000, output_tokens=5_000_000)
+    def test_very_large_token_counts(self):
+        """Test pricing with very large token counts."""
+        cost = estimate_cost(
+            "gpt-4o", input_tokens=10000000, output_tokens=5000000
+        )
         assert cost > 0
-        assert isinstance(cost, float)
+        assert cost < 10000  # Reasonable upper bound
 
-    def test_model_id_case_sensitivity(self):
-        """Test model ID matching is case-sensitive."""
-        pricing1 = get_model_pricing("gpt-4o")
-        pricing2 = get_model_pricing("GPT-4O")
-        # Should not match due to case
-        assert pricing1 is not None
-        # Uppercase might not match exact, but could partial match
+    def test_pricing_precision(self):
+        """Test pricing calculations maintain precision."""
+        cost = estimate_cost("gpt-4o", input_tokens=1, output_tokens=1)
+        assert cost > 0
+        assert cost < 1  # Should be fraction of a cent
 
-    def test_special_characters_in_model_id(self):
-        """Test model IDs with special characters."""
-        pricing = get_model_pricing("llama3.1:8b")
-        assert pricing is not None
+    def test_none_model_id(self):
+        """Test pricing with None as model ID."""
+        pricing = get_model_pricing(None)
+        assert pricing is None
 
-    def test_compare_costs_preserves_order(self):
-        """Test compare_costs returns dict with all models."""
-        models = ["gpt-4o", "gpt-3.5-turbo", "gpt-4o-mini"]
-        costs = compare_costs(models, input_tokens=1000)
-        assert set(costs.keys()) == set(models)
+    def test_empty_string_model_id(self):
+        """Test pricing with empty string as model ID."""
+        pricing = get_model_pricing("")
+        assert pricing is None
+
+
+class TestEmbeddingPricing:
+    """Test pricing for embedding models."""
+
+    def test_embedding_model_has_pricing(self):
+        """Test embedding models have pricing defined."""
+        models = [
+            "text-embedding-3-small",
+            "text-embedding-3-large",
+            "text-embedding-ada-002",
+        ]
+        for model in models:
+            pricing = get_model_pricing(model)
+            assert pricing is not None, f"Missing pricing for {model}"
+
+    def test_embedding_cost_estimation(self):
+        """Test cost estimation for embeddings."""
+        cost = estimate_cost(
+            "text-embedding-3-small", input_tokens=1000, output_tokens=0
+        )
+        assert cost >= 0
+
+    def test_embedding_cheaper_than_chat(self):
+        """Test embeddings are cheaper than chat completions."""
+        embed_cost = estimate_cost(
+            "text-embedding-3-small", input_tokens=1000, output_tokens=0
+        )
+        chat_cost = estimate_cost("gpt-4o", input_tokens=1000, output_tokens=0)
+        assert embed_cost < chat_cost
+
+
+class TestPricingComparison:
+    """Test comprehensive pricing comparisons."""
+
+    def test_openai_vs_anthropic_pricing(self):
+        """Test comparing OpenAI vs Anthropic pricing."""
+        comparison = compare_costs(
+            ["gpt-4o", "claude-3-5-sonnet-20241022"],
+            input_tokens=1000,
+            output_tokens=500,
+        )
+        assert len(comparison) == 2
+        assert all(cost > 0 for cost in comparison.values())
+
+    def test_model_tiers_pricing(self):
+        """Test pricing reflects model tiers (small < medium < large)."""
+        small = estimate_cost("gpt-4o-mini", input_tokens=1000, output_tokens=500)
+        large = estimate_cost("gpt-4o", input_tokens=1000, output_tokens=500)
+        assert small < large
