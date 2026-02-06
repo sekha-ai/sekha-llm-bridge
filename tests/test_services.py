@@ -17,7 +17,6 @@ from sekha_llm_bridge.models.requests import (
     ScoreRequest,
 )
 
-
 # ============================================
 # Embedding Service Tests
 # ============================================
