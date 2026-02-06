@@ -1,3 +1,4 @@
+# fmt: skip
 """Unit tests for LLM Bridge services"""
 
 import pytest
