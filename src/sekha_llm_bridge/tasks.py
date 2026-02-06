@@ -1,6 +1,6 @@
 from typing import List
 import litellm
-from .celery_app import celery_app
+from .workers.celery_app import celery_app
 from .config import settings
 
 
