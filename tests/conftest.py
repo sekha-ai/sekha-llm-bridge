@@ -17,9 +17,6 @@ mock_settings.server_host = "0.0.0.0"
 mock_settings.server_port = 5001
 mock_settings.log_level = "info"
 
-# Patch settings globally before imports
-sys.modules["sekha_llm_bridge"].config.settings = mock_settings if "sekha_llm_bridge" in sys.modules else None
-
 
 @pytest.fixture(autouse=True)
 def mock_settings_fixture():
