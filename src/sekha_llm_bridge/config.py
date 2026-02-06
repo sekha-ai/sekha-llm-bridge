@@ -35,7 +35,7 @@ class VisionCapabilities(BaseModel):
     max_image_size_mb: int = Field(default=20, description="Maximum image size in MB")
     supported_formats: List[str] = Field(
         default=["jpg", "jpeg", "png", "gif", "webp"],
-        description="Supported image formats"
+        description="Supported image formats",
     )
 
 
@@ -136,7 +136,7 @@ class RoutingConfig(BaseModel):
     )
     require_vision_for_images: bool = Field(
         default=True,
-        description="Require vision-capable models when images are detected"
+        description="Require vision-capable models when images are detected",
     )
     max_cost_per_request: Optional[float] = Field(
         None, description="Maximum cost per request in USD"

@@ -1,16 +1,14 @@
 """Tests for vision support and multi-modal messages."""
 
 import pytest
-from unittest.mock import Mock, AsyncMock, patch
+from unittest.mock import Mock, patch
 
 from sekha_llm_bridge.providers.base import (
     ChatMessage,
     MessageRole,
-    ChatResponse,
-    ModelInfo,
 )
 from sekha_llm_bridge.providers.litellm_provider import LiteLlmProvider
-from sekha_llm_bridge.registry import ModelRegistry, RoutingResult
+from sekha_llm_bridge.registry import ModelRegistry
 from sekha_llm_bridge.config import ModelTask
 
 
@@ -82,9 +80,7 @@ class TestVisionMessageConversion:
         assert len(converted) == 1
         image_part = converted[0]["content"][1]
         assert image_part["type"] == "image_url"
-        assert image_part["image_url"]["url"].startswith(
-            "data:image/jpeg;base64,"
-        )
+        assert image_part["image_url"]["url"].startswith("data:image/jpeg;base64,")
         assert base64_data in image_part["image_url"]["url"]
 
     def test_message_with_multiple_images(self):

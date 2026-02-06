@@ -276,16 +276,16 @@ class LiteLlmProvider(LlmProvider):
 
     async def list_models(self) -> List[ModelInfo]:
         """List available models from configuration.
-        
+
         Returns models that were configured for this provider.
         For dynamic model discovery, providers should implement
         their own API queries (e.g., Ollama's /api/tags endpoint).
-        
+
         Returns:
             List of ModelInfo objects from configuration
         """
         models = []
-        
+
         for model_config in self.config.get("models", []):
             model_info = ModelInfo(
                 model_id=model_config["model_id"],
@@ -294,7 +294,9 @@ class LiteLlmProvider(LlmProvider):
                 context_window=model_config.get("context_window"),
                 supports_vision=model_config.get("supports_vision", False),
                 supports_audio=model_config.get("supports_audio", False),
-                supports_function_calling=model_config.get("supports_function_calling", False),
+                supports_function_calling=model_config.get(
+                    "supports_function_calling", False
+                ),
                 dimension=model_config.get("dimension"),
                 metadata={
                     "task": model_config.get("task"),
@@ -302,7 +304,7 @@ class LiteLlmProvider(LlmProvider):
                 },
             )
             models.append(model_info)
-        
+
         logger.debug(f"Listing {len(models)} configured models for {self.provider_id}")
         return models
 

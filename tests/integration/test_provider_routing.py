@@ -10,10 +10,9 @@ Tests validate:
 """
 
 import pytest
-import asyncio
-from unittest.mock import AsyncMock, MagicMock, patch
-from sekha_llm_bridge.registry import registry, RoutingResult
-from sekha_llm_bridge.config import ModelTask, ProviderType
+from unittest.mock import MagicMock, patch
+from sekha_llm_bridge.registry import registry
+from sekha_llm_bridge.config import ModelTask
 
 
 class TestBasicRouting:
@@ -27,20 +26,22 @@ class TestBasicRouting:
             mock_candidates.return_value = [
                 ("ollama", "nomic-embed-text", 1),
             ]
-            
+
             mock_provider = MagicMock()
             mock_provider.provider_id = "ollama"
             mock_provider.provider_type = "ollama"
-            
+
             with patch.object(registry, "providers", {"ollama": mock_provider}):
                 with patch.object(registry, "circuit_breakers") as mock_cbs:
                     mock_cbs.get.return_value = MagicMock(is_open=lambda: False)
-                    
-                    with patch("sekha_llm_bridge.registry.estimate_cost", return_value=0.0):
+
+                    with patch(
+                        "sekha_llm_bridge.registry.estimate_cost", return_value=0.0
+                    ):
                         result = await registry.route_with_fallback(
                             task=ModelTask.EMBEDDING
                         )
-                        
+
                         assert result.provider.provider_id == "ollama"
                         assert result.model_id == "nomic-embed-text"
                         assert "embed" in result.model_id.lower()
@@ -51,38 +52,48 @@ class TestBasicRouting:
         # Small chat: simple queries, should use smaller models
         with patch.object(registry, "_get_candidates") as mock_candidates:
             mock_candidates.return_value = [("ollama", "llama3.1:8b", 1)]
-            
+
             mock_provider = MagicMock()
             mock_provider.provider_id = "ollama"
-            
+
             with patch.object(registry, "providers", {"ollama": mock_provider}):
                 with patch.object(registry, "circuit_breakers") as mock_cbs:
                     mock_cbs.get.return_value = MagicMock(is_open=lambda: False)
-                    
-                    with patch("sekha_llm_bridge.registry.estimate_cost", return_value=0.0):
+
+                    with patch(
+                        "sekha_llm_bridge.registry.estimate_cost", return_value=0.0
+                    ):
                         result = await registry.route_with_fallback(
                             task=ModelTask.CHAT_SMALL
                         )
-                        
-                        assert "8b" in result.model_id.lower() or "small" in result.model_id.lower()
-        
+
+                        assert (
+                            "8b" in result.model_id.lower()
+                            or "small" in result.model_id.lower()
+                        )
+
         # Smart chat: complex queries, should use larger models
         with patch.object(registry, "_get_candidates") as mock_candidates:
             mock_candidates.return_value = [("openai", "gpt-4o", 1)]
-            
+
             mock_provider = MagicMock()
             mock_provider.provider_id = "openai"
-            
+
             with patch.object(registry, "providers", {"openai": mock_provider}):
                 with patch.object(registry, "circuit_breakers") as mock_cbs:
                     mock_cbs.get.return_value = MagicMock(is_open=lambda: False)
-                    
-                    with patch("sekha_llm_bridge.registry.estimate_cost", return_value=0.01):
+
+                    with patch(
+                        "sekha_llm_bridge.registry.estimate_cost", return_value=0.01
+                    ):
                         result = await registry.route_with_fallback(
                             task=ModelTask.CHAT_SMART
                         )
-                        
-                        assert "gpt-4" in result.model_id.lower() or "claude" in result.model_id.lower()
+
+                        assert (
+                            "gpt-4" in result.model_id.lower()
+                            or "claude" in result.model_id.lower()
+                        )
 
 
 class TestPriorityRouting:
@@ -94,25 +105,29 @@ class TestPriorityRouting:
         with patch.object(registry, "_get_candidates") as mock_candidates:
             # Priority 1 should be selected over priority 2
             mock_candidates.return_value = [
-                ("primary", "model-a", 1),    # Highest priority
-                ("fallback", "model-b", 2),   # Lower priority
+                ("primary", "model-a", 1),  # Highest priority
+                ("fallback", "model-b", 2),  # Lower priority
             ]
-            
+
             primary = MagicMock()
             primary.provider_id = "primary"
-            
+
             fallback = MagicMock()
             fallback.provider_id = "fallback"
-            
-            with patch.object(registry, "providers", {"primary": primary, "fallback": fallback}):
+
+            with patch.object(
+                registry, "providers", {"primary": primary, "fallback": fallback}
+            ):
                 with patch.object(registry, "circuit_breakers") as mock_cbs:
                     mock_cbs.get.return_value = MagicMock(is_open=lambda: False)
-                    
-                    with patch("sekha_llm_bridge.registry.estimate_cost", return_value=0.0):
+
+                    with patch(
+                        "sekha_llm_bridge.registry.estimate_cost", return_value=0.0
+                    ):
                         result = await registry.route_with_fallback(
                             task=ModelTask.CHAT_SMALL
                         )
-                        
+
                         # Should select priority 1
                         assert result.provider.provider_id == "primary"
                         assert result.model_id == "model-a"
@@ -125,28 +140,32 @@ class TestPriorityRouting:
                 ("primary", "model-a", 1),
                 ("fallback", "model-b", 2),
             ]
-            
+
             primary = MagicMock()
             primary.provider_id = "primary"
-            
+
             fallback = MagicMock()
             fallback.provider_id = "fallback"
-            
-            with patch.object(registry, "providers", {"primary": primary, "fallback": fallback}):
+
+            with patch.object(
+                registry, "providers", {"primary": primary, "fallback": fallback}
+            ):
                 with patch.object(registry, "circuit_breakers") as mock_cbs:
                     # Primary circuit breaker is open
                     def cb_side_effect(provider_id):
                         if provider_id == "primary":
                             return MagicMock(is_open=lambda: True)  # Circuit open
                         return MagicMock(is_open=lambda: False)
-                    
+
                     mock_cbs.get.side_effect = cb_side_effect
-                    
-                    with patch("sekha_llm_bridge.registry.estimate_cost", return_value=0.0):
+
+                    with patch(
+                        "sekha_llm_bridge.registry.estimate_cost", return_value=0.0
+                    ):
                         result = await registry.route_with_fallback(
                             task=ModelTask.CHAT_SMALL
                         )
-                        
+
                         # Should fallback to priority 2
                         assert result.provider.provider_id == "fallback"
                         assert result.model_id == "model-b"
@@ -163,26 +182,28 @@ class TestVisionRouting:
             mock_candidates.return_value = [
                 ("openai", "gpt-4o", 1),
             ]
-            
+
             # Verify filter was applied
             mock_candidates.assert_not_called()
-            
+
             result_call = mock_candidates.return_value
             assert len(result_call) == 1
-            
+
             mock_provider = MagicMock()
             mock_provider.provider_id = "openai"
-            
+
             with patch.object(registry, "providers", {"openai": mock_provider}):
                 with patch.object(registry, "circuit_breakers") as mock_cbs:
                     mock_cbs.get.return_value = MagicMock(is_open=lambda: False)
-                    
-                    with patch("sekha_llm_bridge.registry.estimate_cost", return_value=0.01):
+
+                    with patch(
+                        "sekha_llm_bridge.registry.estimate_cost", return_value=0.01
+                    ):
                         result = await registry.route_with_fallback(
                             task=ModelTask.CHAT_SMART,
                             require_vision=True,
                         )
-                        
+
                         # Should route to vision model
                         assert result.model_id == "gpt-4o"
                         mock_candidates.assert_called_once_with(
@@ -197,7 +218,7 @@ class TestVisionRouting:
         with patch.object(registry, "_get_candidates") as mock_candidates:
             # No vision-capable models available
             mock_candidates.return_value = []
-            
+
             with pytest.raises(RuntimeError, match="No suitable provider"):
                 await registry.route_with_fallback(
                     task=ModelTask.CHAT_SMART,
@@ -217,23 +238,27 @@ class TestPreferredModelRouting:
                 ("openai", "gpt-4o-mini", 0),  # Preferred (priority 0)
                 ("ollama", "llama3.1:8b", 1),  # Default (priority 1)
             ]
-            
+
             preferred = MagicMock()
             preferred.provider_id = "openai"
-            
+
             default = MagicMock()
             default.provider_id = "ollama"
-            
-            with patch.object(registry, "providers", {"openai": preferred, "ollama": default}):
+
+            with patch.object(
+                registry, "providers", {"openai": preferred, "ollama": default}
+            ):
                 with patch.object(registry, "circuit_breakers") as mock_cbs:
                     mock_cbs.get.return_value = MagicMock(is_open=lambda: False)
-                    
-                    with patch("sekha_llm_bridge.registry.estimate_cost", return_value=0.001):
+
+                    with patch(
+                        "sekha_llm_bridge.registry.estimate_cost", return_value=0.001
+                    ):
                         result = await registry.route_with_fallback(
                             task=ModelTask.CHAT_SMALL,
                             preferred_model="gpt-4o-mini",
                         )
-                        
+
                         # Should use preferred model
                         assert result.model_id == "gpt-4o-mini"
                         assert "preferred" in result.reason.lower()
@@ -246,20 +271,22 @@ class TestPreferredModelRouting:
             mock_candidates.return_value = [
                 ("ollama", "llama3.1:8b", 1),  # Fallback
             ]
-            
+
             fallback = MagicMock()
             fallback.provider_id = "ollama"
-            
+
             with patch.object(registry, "providers", {"ollama": fallback}):
                 with patch.object(registry, "circuit_breakers") as mock_cbs:
                     mock_cbs.get.return_value = MagicMock(is_open=lambda: False)
-                    
-                    with patch("sekha_llm_bridge.registry.estimate_cost", return_value=0.0):
+
+                    with patch(
+                        "sekha_llm_bridge.registry.estimate_cost", return_value=0.0
+                    ):
                         result = await registry.route_with_fallback(
                             task=ModelTask.CHAT_SMALL,
                             preferred_model="unavailable-model",
                         )
-                        
+
                         # Should fallback to available model
                         assert result.model_id == "llama3.1:8b"
 
@@ -275,27 +302,32 @@ class TestCircuitBreakerIntegration:
                 ("unhealthy", "model-a", 1),
                 ("healthy", "model-b", 2),
             ]
-            
+
             unhealthy = MagicMock()
             unhealthy.provider_id = "unhealthy"
-            
+
             healthy = MagicMock()
             healthy.provider_id = "healthy"
-            
-            with patch.object(registry, "providers", {"unhealthy": unhealthy, "healthy": healthy}):
+
+            with patch.object(
+                registry, "providers", {"unhealthy": unhealthy, "healthy": healthy}
+            ):
                 with patch.object(registry, "circuit_breakers") as mock_cbs:
+
                     def cb_side_effect(provider_id):
                         if provider_id == "unhealthy":
                             return MagicMock(is_open=lambda: True)
                         return MagicMock(is_open=lambda: False)
-                    
+
                     mock_cbs.get.side_effect = cb_side_effect
-                    
-                    with patch("sekha_llm_bridge.registry.estimate_cost", return_value=0.0):
+
+                    with patch(
+                        "sekha_llm_bridge.registry.estimate_cost", return_value=0.0
+                    ):
                         result = await registry.route_with_fallback(
                             task=ModelTask.CHAT_SMALL
                         )
-                        
+
                         # Should skip unhealthy, use healthy
                         assert result.provider.provider_id == "healthy"
 
@@ -307,22 +339,22 @@ class TestCircuitBreakerIntegration:
                 ("provider1", "model-a", 1),
                 ("provider2", "model-b", 2),
             ]
-            
+
             p1 = MagicMock()
             p1.provider_id = "provider1"
-            
+
             p2 = MagicMock()
             p2.provider_id = "provider2"
-            
-            with patch.object(registry, "providers", {"provider1": p1, "provider2": p2}):
+
+            with patch.object(
+                registry, "providers", {"provider1": p1, "provider2": p2}
+            ):
                 with patch.object(registry, "circuit_breakers") as mock_cbs:
                     # All circuits open
                     mock_cbs.get.return_value = MagicMock(is_open=lambda: True)
-                    
+
                     with pytest.raises(RuntimeError, match="No suitable provider"):
-                        await registry.route_with_fallback(
-                            task=ModelTask.CHAT_SMALL
-                        )
+                        await registry.route_with_fallback(task=ModelTask.CHAT_SMALL)
 
 
 class TestCostAwareRouting:
@@ -337,27 +369,32 @@ class TestCostAwareRouting:
                 ("expensive", "gpt-4o", 1),
                 ("cheap", "llama3.1:8b", 1),  # Same priority
             ]
-            
+
             expensive = MagicMock()
             expensive.provider_id = "expensive"
-            
+
             cheap = MagicMock()
             cheap.provider_id = "cheap"
-            
-            with patch.object(registry, "providers", {"expensive": expensive, "cheap": cheap}):
+
+            with patch.object(
+                registry, "providers", {"expensive": expensive, "cheap": cheap}
+            ):
                 with patch.object(registry, "circuit_breakers") as mock_cbs:
                     mock_cbs.get.return_value = MagicMock(is_open=lambda: False)
-                    
+
                     def cost_side_effect(model_id, *args):
                         if "gpt-4o" in model_id:
                             return 0.01
                         return 0.0
-                    
-                    with patch("sekha_llm_bridge.registry.estimate_cost", side_effect=cost_side_effect):
+
+                    with patch(
+                        "sekha_llm_bridge.registry.estimate_cost",
+                        side_effect=cost_side_effect,
+                    ):
                         result = await registry.route_with_fallback(
                             task=ModelTask.CHAT_SMALL
                         )
-                        
+
                         # Should prefer free model
                         assert result.provider.provider_id == "cheap"
                         assert result.estimated_cost == 0.0
@@ -370,28 +407,33 @@ class TestCostAwareRouting:
                 ("openai", "gpt-4o", 1),
                 ("ollama", "llama3.1:8b", 2),
             ]
-            
+
             openai = MagicMock()
             openai.provider_id = "openai"
-            
+
             ollama = MagicMock()
             ollama.provider_id = "ollama"
-            
-            with patch.object(registry, "providers", {"openai": openai, "ollama": ollama}):
+
+            with patch.object(
+                registry, "providers", {"openai": openai, "ollama": ollama}
+            ):
                 with patch.object(registry, "circuit_breakers") as mock_cbs:
                     mock_cbs.get.return_value = MagicMock(is_open=lambda: False)
-                    
+
                     def cost_side_effect(model_id, *args):
                         if "gpt-4o" in model_id:
                             return 0.05  # Too expensive
                         return 0.0
-                    
-                    with patch("sekha_llm_bridge.registry.estimate_cost", side_effect=cost_side_effect):
+
+                    with patch(
+                        "sekha_llm_bridge.registry.estimate_cost",
+                        side_effect=cost_side_effect,
+                    ):
                         result = await registry.route_with_fallback(
                             task=ModelTask.CHAT_SMALL,
                             max_cost=0.01,  # Excludes GPT-4o
                         )
-                        
+
                         # Should route to free model
                         assert result.provider.provider_id == "ollama"
 
