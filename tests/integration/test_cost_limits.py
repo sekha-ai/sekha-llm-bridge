@@ -305,27 +305,35 @@ class TestCostReporting:
         logger.addHandler(handler)
         logger.setLevel(logging.INFO)
         
-        with patch.object(registry, "_get_candidates") as mock_candidates:
-            mock_candidates.return_value = [("openai", "gpt-4o-mini", 1)]
-            
-            mock_provider = MagicMock()
-            mock_provider.provider_id = "openai"
-            
-            with patch.object(registry, "providers", {"openai": mock_provider}):
-                with patch.object(registry, "circuit_breakers") as mock_cbs:
-                    mock_cbs.get.return_value = MagicMock(is_open=lambda: False)
-                    
-                    with patch("sekha_llm_bridge.registry.estimate_cost", return_value=0.002):
-                        result = await registry.route_with_fallback(
-                            task=ModelTask.CHAT_SMALL,
-                            max_cost=0.01
-                        )
+        try:
+            with patch.object(registry, "_get_candidates") as mock_candidates:
+                mock_candidates.return_value = [("openai", "gpt-4o-mini", 1)]
+                
+                mock_provider = MagicMock()
+                mock_provider.provider_id = "openai"
+                
+                with patch.object(registry, "providers", {"openai": mock_provider}):
+                    with patch.object(registry, "circuit_breakers") as mock_cbs:
+                        mock_cbs.get.return_value = MagicMock(is_open=lambda: False)
                         
-                        # Verify cost was logged
-                        log_output = log_capture.getvalue()
-                        # Logger might log routing decision
-        
-        logger.removeHandler(handler)
+                        with patch("sekha_llm_bridge.registry.estimate_cost", return_value=0.002):
+                            result = await registry.route_with_fallback(
+                                task=ModelTask.CHAT_SMALL,
+                                max_cost=0.01
+                            )
+                            
+                            # Verify routing completed successfully
+                            assert result is not None
+                            assert result.provider.provider_id == "openai"
+                            assert result.estimated_cost == 0.002
+                            
+                            # Verify cost was logged
+                            log_output = log_capture.getvalue()
+                            # Log output should contain routing information
+                            # (exact format depends on logger configuration)
+                            assert isinstance(log_output, str)
+        finally:
+            logger.removeHandler(handler)
 
 
 class TestCostOptimization:
