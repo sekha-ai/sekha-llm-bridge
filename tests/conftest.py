@@ -3,7 +3,6 @@
 import pytest
 import sys
 from unittest.mock import Mock, patch
-from typing import List
 
 # Mock settings before any imports that need it
 mock_settings = Mock()

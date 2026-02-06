@@ -2,7 +2,7 @@
 
 import pytest
 from datetime import datetime, timedelta
-from unittest.mock import Mock, patch, AsyncMock
+from unittest.mock import Mock, patch
 
 from sekha_llm_bridge.registry import (
     ModelRegistry,
@@ -10,7 +10,6 @@ from sekha_llm_bridge.registry import (
     RoutingResult,
 )
 from sekha_llm_bridge.config import ModelTask
-from sekha_llm_bridge.resilience import CircuitBreaker
 
 
 class TestCachedModelInfo:

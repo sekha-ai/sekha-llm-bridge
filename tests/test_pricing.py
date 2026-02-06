@@ -1,6 +1,5 @@
 """Comprehensive tests for pricing module."""
 
-import pytest
 from sekha_llm_bridge.pricing import (
     get_model_pricing,
     estimate_cost,

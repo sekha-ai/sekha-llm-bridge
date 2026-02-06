@@ -1,7 +1,6 @@
 """Comprehensive tests for worker and Celery app configuration."""
 
 import pytest
-from unittest.mock import patch, Mock
 import importlib.util
 
 

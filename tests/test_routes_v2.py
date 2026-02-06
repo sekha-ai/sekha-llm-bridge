@@ -6,7 +6,6 @@ from unittest.mock import patch, Mock, AsyncMock
 
 from sekha_llm_bridge.main import app
 from sekha_llm_bridge.registry import RoutingResult
-from sekha_llm_bridge.config import ModelTask
 
 client = TestClient(app)
 

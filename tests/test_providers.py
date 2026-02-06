@@ -1,17 +1,12 @@
 """Comprehensive tests for LLM provider implementations."""
 
 import pytest
-from unittest.mock import patch, Mock, AsyncMock
-from typing import List
+from unittest.mock import patch, Mock
 
 from sekha_llm_bridge.providers.base import (
     LlmProvider,
     ChatMessage,
     MessageRole,
-    ChatResponse,
-    EmbeddingResponse,
-    ModelInfo,
-    ProviderError,
 )
 from sekha_llm_bridge.providers.litellm_provider import LiteLlmProvider
 
