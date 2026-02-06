@@ -1,7 +1,6 @@
 """Pytest configuration and fixtures for test suite."""
 
 import pytest
-import sys
 from unittest.mock import Mock, patch
 
 # Mock settings before any imports that need it
