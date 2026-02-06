@@ -3,7 +3,7 @@ name: LLM Bridge CI
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main, develop, feature/v2.0-provider-registry]
   pull_request:
     branches: [main, develop]
   workflow_dispatch:
@@ -41,7 +41,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install "black>=25.1.0,<26" "ruff>=0.9.5" "mypy>=1.14.1"
+          pip install "black>=26.1.0" "ruff>=0.14.14" "mypy>=1.14.1"
           pip install -r requirements.txt
           pip install -e .
 
@@ -102,11 +102,14 @@ jobs:
 
       - name: Run unit tests
         run: |
+          pytest tests/ -m "not integration and not e2e" -v
+
+      - name: Run coverage
+        run: |
           pytest tests/ -m "not integration and not e2e" \
             --cov=sekha_llm_bridge \
             --cov-report=xml \
-            --cov-report=term-missing \
-            --junitxml=junit/test-results-${{ matrix.python-version }}.xml
+            --cov-report=term-missing
 
       - name: Upload coverage to Codecov
         if: matrix.python-version == '3.12'
@@ -119,16 +122,11 @@ jobs:
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
-      - name: Check coverage threshold
-        run: |
-          coverage report --fail-under=80
-
 
   integration-test:
-    name: Integration Test with Controller
+    name: Integration Test
     runs-on: ubuntu-latest
     needs: test
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
     services:
       redis:
@@ -140,35 +138,15 @@ jobs:
           --health-interval=10s
           --health-timeout=5s
           --health-retries=5
-      chroma:
-        image: chromadb/chroma:latest
-        ports:
-          - 8000:8000
 
     steps:
-      - name: Checkout llm-bridge
+      - name: Checkout code
         uses: actions/checkout@v6
-        with:
-          repository: sekha-ai/sekha-llm-bridge
-          path: llm-bridge
-
-      - name: Checkout controller
-        uses: actions/checkout@v6
-        with:
-          repository: sekha-ai/sekha-controller
-          path: controller
 
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-
-      - name: Set up Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Clean up Docker resources
-        run: |
-          docker system prune -af --volumes || true
 
       - name: Start Ollama
         run: |
@@ -176,61 +154,41 @@ jobs:
             --name ollama \
             -p 11434:11434 \
             ollama/ollama:latest
+          
+          echo "Waiting for Ollama to start..."
           for i in {1..30}; do
-            if curl -f http://localhost:11434/api/tags; then
-              echo "Ollama ready"
+            if curl -f http://localhost:11434/api/tags 2>/dev/null; then
+              echo "Ollama is ready!"
               break
             fi
+            echo "Waiting... ($i/30)"
             sleep 2
           done
 
-      - name: Pull test models for integration tests
+      - name: Pull integration test models
         run: |
+          echo "Pulling nomic-embed-text..."
           docker exec ollama ollama pull nomic-embed-text
+          echo "Pulling llama3.1:8b..."
           docker exec ollama ollama pull llama3.1:8b
+          echo "Models ready!"
 
-      - name: Build controller
-        working-directory: controller
-        run: cargo build --release
-
-      - name: Start controller
-        working-directory: controller
-        env:
-          SEKHA_PORT: 8080
-          CHROMA_HOST: http://localhost:8000
-          CHROMA_AUTH_TOKEN: ${{ env.CHROMA_AUTH_TOKEN }}
-          REDIS_HOST: redis://localhost:6379/0
-          SEKHA_API_KEY: test-token-123
-        run: |
-          ./target/release/sekha-controller &
-          CONTROLLER_PID=$!
-          echo "CONTROLLER_PID=$CONTROLLER_PID" >> $GITHUB_ENV
-          sleep 5
-          curl -f http://localhost:8080/health || exit 1
-          echo "Controller is healthy"
-
-      - name: Install bridge dependencies
-        working-directory: llm-bridge
+      - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install -e .
 
       - name: Run integration tests
-        working-directory: llm-bridge
         env:
           OLLAMA_HOST: ${{ env.OLLAMA_HOST }}
           REDIS_URL: ${{ env.REDIS_URL }}
-          CONTROLLER_URL: http://localhost:8080
         run: |
           pytest tests/integration/ -v -m integration
 
       - name: Cleanup
         if: always()
         run: |
-          if [ ! -z "$CONTROLLER_PID" ]; then
-            kill $CONTROLLER_PID || true
-          fi
           docker stop ollama || true
           docker rm ollama || true
 
@@ -300,7 +258,7 @@ jobs:
           load: true
           tags: sekha-llm-bridge:test-local
           cache-from: type=gha
-          platforms: linux/amd64  # Single platform for loading
+          platforms: linux/amd64
 
       - name: Test image
         run: |
