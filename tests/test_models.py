@@ -3,14 +3,10 @@
 import pytest
 from pydantic import ValidationError
 
-from sekha_llm_bridge.models.requests import (
-    EmbedRequest,
-    SummarizeRequest,
-    ExtractRequest,
-    ScoreRequest,
-    ChatMessage,
-    ChatCompletionRequest,
-)
+from sekha_llm_bridge.models.requests import (ChatCompletionRequest,
+                                              ChatMessage, EmbedRequest,
+                                              ExtractRequest, ScoreRequest,
+                                              SummarizeRequest)
 
 
 class TestEmbedRequest:

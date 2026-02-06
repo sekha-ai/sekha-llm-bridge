@@ -2,8 +2,8 @@
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import List, Dict, Any, Optional, AsyncIterator
 from enum import Enum
+from typing import Any, AsyncIterator, Dict, List, Optional
 
 
 class MessageRole(str, Enum):

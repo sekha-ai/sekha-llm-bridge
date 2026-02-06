@@ -9,10 +9,12 @@ Tests validate:
 - Cost-aware routing
 """
 
-import pytest
 from unittest.mock import MagicMock, patch
-from sekha_llm_bridge.registry import registry
+
+import pytest
+
 from sekha_llm_bridge.config import ModelTask
+from sekha_llm_bridge.registry import registry
 
 
 class TestBasicRouting:

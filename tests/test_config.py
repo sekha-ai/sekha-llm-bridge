@@ -1,14 +1,12 @@
 """Comprehensive tests for configuration and settings."""
 
-import pytest
-from unittest.mock import patch
-import os
 import importlib.util
+import os
+from unittest.mock import patch
 
-from sekha_llm_bridge.config import (
-    ModelTask,
-    settings,
-)
+import pytest
+
+from sekha_llm_bridge.config import ModelTask, settings
 
 
 class TestModelTask:

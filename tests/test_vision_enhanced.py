@@ -8,7 +8,8 @@ Tests validate:
 """
 
 import pytest
-from sekha_llm_bridge.config import VisionCapabilities, ModelConfig, ModelTask
+
+from sekha_llm_bridge.config import ModelConfig, ModelTask, VisionCapabilities
 
 
 class TestVisionCapabilities:

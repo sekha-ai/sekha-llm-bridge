@@ -1,7 +1,8 @@
 """Comprehensive tests for worker and Celery app configuration."""
 
-import pytest
 import importlib.util
+
+import pytest
 
 
 class TestWorkerModule:
@@ -35,12 +36,10 @@ class TestCeleryTasks:
     def test_all_tasks_have_names(self):
         """Test all tasks have proper names."""
         try:
-            from sekha_llm_bridge.tasks import (
-                embed_text_task,
-                summarize_messages_task,
-                extract_entities_task,
-                score_importance_task,
-            )
+            from sekha_llm_bridge.tasks import (embed_text_task,
+                                                extract_entities_task,
+                                                score_importance_task,
+                                                summarize_messages_task)
 
             tasks = [
                 embed_text_task,

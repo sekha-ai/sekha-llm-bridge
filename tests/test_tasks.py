@@ -1,15 +1,13 @@
 """Comprehensive tests for Celery background tasks."""
 
-import pytest
-from unittest.mock import patch, Mock
 import json
+from unittest.mock import Mock, patch
 
-from sekha_llm_bridge.tasks import (
-    embed_text_task,
-    summarize_messages_task,
-    extract_entities_task,
-    score_importance_task,
-)
+import pytest
+
+from sekha_llm_bridge.tasks import (embed_text_task, extract_entities_task,
+                                    score_importance_task,
+                                    summarize_messages_task)
 
 
 class TestEmbedTextTask:

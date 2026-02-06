@@ -1,8 +1,10 @@
 """Unit tests for circuit breaker resilience patterns."""
 
-import pytest
 import asyncio
 from datetime import datetime, timedelta
+
+import pytest
+
 from sekha_llm_bridge.resilience import CircuitBreaker, CircuitState
 
 

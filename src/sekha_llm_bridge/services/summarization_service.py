@@ -2,9 +2,9 @@
 
 import logging
 
-from sekha_llm_bridge.utils.llm_client import llm_client
 from sekha_llm_bridge.models.requests import SummarizeRequest
 from sekha_llm_bridge.models.responses import SummarizeResponse
+from sekha_llm_bridge.utils.llm_client import llm_client
 
 logger = logging.getLogger(__name__)
 

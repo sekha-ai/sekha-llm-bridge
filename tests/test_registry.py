@@ -1,15 +1,13 @@
 """Comprehensive tests for model registry."""
 
-import pytest
 from datetime import datetime, timedelta
 from unittest.mock import Mock, patch
 
-from sekha_llm_bridge.registry import (
-    ModelRegistry,
-    CachedModelInfo,
-    RoutingResult,
-)
+import pytest
+
 from sekha_llm_bridge.config import ModelTask
+from sekha_llm_bridge.registry import (CachedModelInfo, ModelRegistry,
+                                       RoutingResult)
 
 
 class TestCachedModelInfo:

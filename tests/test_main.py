@@ -1,8 +1,9 @@
 """Comprehensive tests for main application module."""
 
+from unittest.mock import Mock, patch
+
 import pytest
 from fastapi.testclient import TestClient
-from unittest.mock import patch, Mock
 
 from sekha_llm_bridge.main import app, lifespan
 

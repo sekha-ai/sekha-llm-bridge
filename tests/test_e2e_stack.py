@@ -9,8 +9,9 @@ These tests validate:
 - Dimension switching works
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 
 class TestProxyBridgeIntegration:
@@ -121,8 +122,8 @@ class TestProviderFallback:
     @pytest.mark.e2e
     async def test_fallback_on_provider_failure(self):
         """Test that bridge falls back to next provider on failure."""
-        from sekha_llm_bridge.registry import registry
         from sekha_llm_bridge.config import ModelTask
+        from sekha_llm_bridge.registry import registry
 
         # Mock provider health
         with patch.object(registry, "providers") as mock_providers:
@@ -158,8 +159,8 @@ class TestProviderFallback:
     @pytest.mark.e2e
     async def test_no_providers_available(self):
         """Test behavior when no providers are available."""
-        from sekha_llm_bridge.registry import registry
         from sekha_llm_bridge.config import ModelTask
+        from sekha_llm_bridge.registry import registry
 
         with patch.object(registry, "providers") as mock_providers:
             # All providers unhealthy
@@ -176,8 +177,8 @@ class TestDimensionSwitching:
     @pytest.mark.e2e
     async def test_embedding_dimension_coordination(self):
         """Test that embedding dimension is consistent across services."""
-        from sekha_llm_bridge.registry import registry
         from sekha_llm_bridge.config import ModelTask
+        from sekha_llm_bridge.registry import registry
 
         # Mock routing for 768-dim embedding
         with patch.object(registry, "route_with_fallback") as mock_route:

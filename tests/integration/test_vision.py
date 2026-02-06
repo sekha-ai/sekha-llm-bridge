@@ -9,13 +9,15 @@ Tests validate:
 - Error handling for unsupported formats
 """
 
-import pytest
 import base64
 from unittest.mock import MagicMock, patch
-from sekha_llm_bridge.registry import registry
+
+import pytest
+
 from sekha_llm_bridge.config import ModelTask
-from sekha_llm_bridge.providers.litellm_provider import LiteLlmProvider
 from sekha_llm_bridge.models import ChatMessage
+from sekha_llm_bridge.providers.litellm_provider import LiteLlmProvider
+from sekha_llm_bridge.registry import registry
 
 
 class TestVisionRouting:

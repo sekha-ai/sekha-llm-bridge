@@ -1,11 +1,7 @@
 """Integration tests for v2 implementation."""
 
-from sekha_llm_bridge.config import (
-    ProviderConfig,
-    ModelConfig,
-    ModelTask,
-    ProviderType,
-)
+from sekha_llm_bridge.config import (ModelConfig, ModelTask, ProviderConfig,
+                                     ProviderType)
 
 
 class TestProviderConfigIntegration:

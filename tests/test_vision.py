@@ -1,15 +1,13 @@
 """Tests for vision support and multi-modal messages."""
 
-import pytest
 from unittest.mock import Mock, patch
 
-from sekha_llm_bridge.providers.base import (
-    ChatMessage,
-    MessageRole,
-)
+import pytest
+
+from sekha_llm_bridge.config import ModelTask
+from sekha_llm_bridge.providers.base import ChatMessage, MessageRole
 from sekha_llm_bridge.providers.litellm_provider import LiteLlmProvider
 from sekha_llm_bridge.registry import ModelRegistry
-from sekha_llm_bridge.config import ModelTask
 
 
 class TestVisionMessageConversion:

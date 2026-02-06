@@ -1,9 +1,9 @@
 """Resilience patterns for LLM provider failures."""
 
+import logging
 from datetime import datetime, timedelta
 from enum import Enum
 from typing import Optional
-import logging
 
 logger = logging.getLogger(__name__)
 

@@ -1,11 +1,11 @@
 """Embedding generation service"""
 
-from typing import List, Optional
 import logging
+from typing import List, Optional
 
-from sekha_llm_bridge.utils.llm_client import llm_client
 from sekha_llm_bridge.models.requests import EmbedRequest
 from sekha_llm_bridge.models.responses import EmbedResponse
+from sekha_llm_bridge.utils.llm_client import llm_client
 
 logger = logging.getLogger(__name__)
 

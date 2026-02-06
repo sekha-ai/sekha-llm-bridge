@@ -14,32 +14,25 @@ from prometheus_client import make_asgi_app
 
 # Internal imports - all from the package
 from sekha_llm_bridge.config import settings
-from sekha_llm_bridge.models import (
-    EmbedRequest,
-    EmbedResponse,
-    SummarizeRequest,
-    SummarizeResponse,
-    ExtractRequest,
-    ExtractResponse,
-    ScoreRequest,
-    ScoreResponse,
-    HealthResponse,
-    ChatCompletionRequest,
-    ChatCompletionResponse,
-    ChatCompletionChoice,
-    ChatCompletionUsage,
-)
-from sekha_llm_bridge.utils.llm_client import llm_client
-from sekha_llm_bridge.services.embedding_service import embedding_service
-from sekha_llm_bridge.services.summarization_service import summarization_service
-from sekha_llm_bridge.services.entity_extraction_service import (
-    entity_extraction_service,
-)
-from sekha_llm_bridge.services.importance_scorer import importance_scorer_service
-
+from sekha_llm_bridge.models import (ChatCompletionChoice,
+                                     ChatCompletionRequest,
+                                     ChatCompletionResponse,
+                                     ChatCompletionUsage, EmbedRequest,
+                                     EmbedResponse, ExtractRequest,
+                                     ExtractResponse, HealthResponse,
+                                     ScoreRequest, ScoreResponse,
+                                     SummarizeRequest, SummarizeResponse)
+from sekha_llm_bridge.registry import registry
 # V2.0 routing (multi-provider support)
 from sekha_llm_bridge.routes_v2 import router as v2_router
-from sekha_llm_bridge.registry import registry
+from sekha_llm_bridge.services.embedding_service import embedding_service
+from sekha_llm_bridge.services.entity_extraction_service import \
+    entity_extraction_service
+from sekha_llm_bridge.services.importance_scorer import \
+    importance_scorer_service
+from sekha_llm_bridge.services.summarization_service import \
+    summarization_service
+from sekha_llm_bridge.utils.llm_client import llm_client
 
 # Configure logging
 logging.basicConfig(

@@ -1,13 +1,13 @@
 """V2.0 routing API endpoints for multi-provider support."""
 
 import logging
-from typing import List, Optional, Dict, Any
-from pydantic import BaseModel, Field
+from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel, Field
 
-from .registry import registry
 from .config import ModelTask
+from .registry import registry
 
 logger = logging.getLogger(__name__)
 

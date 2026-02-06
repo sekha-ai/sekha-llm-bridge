@@ -1,15 +1,15 @@
 """Model registry for provider and model management."""
 
 import logging
-from typing import Dict, List, Optional, Tuple
-from datetime import datetime, timedelta
 from dataclasses import dataclass, field
+from datetime import datetime, timedelta
+from typing import Dict, List, Optional, Tuple
 
-from .config import settings, ModelTask
+from .config import ModelTask, settings
+from .pricing import estimate_cost
 from .providers.base import LlmProvider
 from .providers.litellm_provider import LiteLlmProvider
 from .resilience import CircuitBreaker
-from .pricing import estimate_cost
 
 logger = logging.getLogger(__name__)
 
