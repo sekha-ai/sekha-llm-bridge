@@ -1,31 +1,110 @@
+[tool.poetry]
+name = "sekha-llm-bridge"
+version = "0.1.0"
+description = "LLM Bridge Service for Sekha"
+authors = ["Sekha AI <dev@sekha-ai.dev>"]
+license = "AGPL-3.0-or-later"
+readme = "README.md"
+homepage = "https://sekha.dev"
+repository = "https://github.com/sekha-ai/sekha-llm-bridge"
+documentation = "https://docs.sekha.dev"
+keywords = ["ai", "llm", "embeddings", "memory", "ollama", "rag"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",    
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+packages = [
+    { include = "sekha_llm_bridge", from = "src" },
+]
+
+[tool.poetry.dependencies]
+python = "^3.12"
+fastapi = "^0.128.0"
+uvicorn = { extras = ["standard"], version = "^0.40.0" }
+pydantic = "^2.9.0"
+pydantic-settings = "^2.5.2"
+litellm = "^1.81.3"
+celery = "^5.4.0"
+redis = "^7.1.0"
+httpx = "^0.28.1"
+pytest = "^9.0.2"
+pytest-asyncio = "^1.3.0"
+tenacity = "^9.1.2"
+prometheus-client = "^0.24.1"
+sqlalchemy = "^2.0.46"
+alembic = "^1.17.2"
+psycopg2-binary = "^2.9.11"
+python-dotenv = "^1.2.1"
+numpy = "^2.4.1"
+pandas = "^3.0.0"
+scikit-learn = "^1.8.0"
+config = "^0.5.1"
+
+[tool.poetry.group.dev.dependencies]
+black = "^26.1.0"
+ruff = "^0.14.14"
+mypy = "^1.14.1"
+pytest-cov = "^7.0.0"
+
+[tool.poetry.scripts]
+llm-bridge = "sekha_llm_bridge.main:run"
+
 [tool.black]
 line-length = 88
-target-version = ['py312']
-exclude = '''
+target-version = ["py312", "py314"]
+include = '\.pyi?$'
+extend-exclude = '''
 /(
-    \.eggs
+  # directories
+  \.eggs
   | \.git
   | \.hg
   | \.mypy_cache
   | \.tox
   | \.venv
-  | _build
-  | buck-out
   | build
   | dist
+  # exclude this specific test file that has formatting issues
   | tests/test_services\.py
 )/
 '''
 
-[tool.pytest.ini_options]
-minversion = "7.0"
-addopts = "-ra -q"
-testpaths = ["tests"]
-python_files = ["test_*.py", "*_test.py"]
-python_classes = ["Test*"]
-python_functions = ["test_*"]
-markers = [
-    "integration: marks tests as integration tests",
-    "e2e: marks tests as end-to-end tests",
-    "slow: marks tests as slow running",
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+
+[tool.mypy]
+python_version = "3.12"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+
+[tool.coverage.run]
+omit = [
+    "src/sekha_llm_bridge/tasks.py",
+    "src/sekha_llm_bridge/worker.py",
+    "src/sekha_llm_bridge/workers/*",
+    "src/sekha_llm_bridge/models/init.py",
 ]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "@abstractmethod",
+]
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
