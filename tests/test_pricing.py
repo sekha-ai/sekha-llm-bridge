@@ -164,9 +164,7 @@ class TestCompareCosts:
 
     def test_compare_single_model(self):
         """Test comparing single model."""
-        comparison = compare_costs(
-            ["gpt-4o"], input_tokens=1000, output_tokens=500
-        )
+        comparison = compare_costs(["gpt-4o"], input_tokens=1000, output_tokens=500)
         assert len(comparison) == 1
         assert "gpt-4o" in comparison
 
@@ -211,9 +209,7 @@ class TestFindCheapestModel:
 
     def test_find_cheapest_single_model(self):
         """Test finding cheapest from single model."""
-        cheapest = find_cheapest_model(
-            ["gpt-4o"], input_tokens=1000, output_tokens=500
-        )
+        cheapest = find_cheapest_model(["gpt-4o"], input_tokens=1000, output_tokens=500)
         assert cheapest == "gpt-4o"
 
     def test_find_cheapest_among_many(self):
@@ -248,9 +244,7 @@ class TestPricingEdgeCases:
 
     def test_very_large_token_counts(self):
         """Test pricing with very large token counts."""
-        cost = estimate_cost(
-            "gpt-4o", input_tokens=10000000, output_tokens=5000000
-        )
+        cost = estimate_cost("gpt-4o", input_tokens=10000000, output_tokens=5000000)
         assert cost > 0
         assert cost < 10000  # Reasonable upper bound
 

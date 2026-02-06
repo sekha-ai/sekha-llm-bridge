@@ -31,7 +31,10 @@ class TestApplicationStartup:
         # Check if CORS middleware is in the middleware stack
         middleware_types = [type(m).__name__ for m in app.user_middleware]
         # CORSMiddleware should be present
-        assert any("CORS" in name for name in middleware_types) or len(app.user_middleware) >= 0
+        assert (
+            any("CORS" in name for name in middleware_types)
+            or len(app.user_middleware) >= 0
+        )
 
 
 class TestHealthEndpoint:
@@ -232,12 +235,16 @@ class TestApplicationIntegration:
         assert tasks_response.status_code == 200
 
         # 2. List models
-        with patch("sekha_llm_bridge.routes_v2.registry.list_all_models", return_value=[]):
+        with patch(
+            "sekha_llm_bridge.routes_v2.registry.list_all_models", return_value=[]
+        ):
             models_response = client.get("/api/v1/models")
             assert models_response.status_code == 200
 
         # 3. Check provider health
-        with patch("sekha_llm_bridge.routes_v2.registry.get_provider_health", return_value={}):
+        with patch(
+            "sekha_llm_bridge.routes_v2.registry.get_provider_health", return_value={}
+        ):
             health_response = client.get("/api/v1/health/providers")
             assert health_response.status_code == 200
 

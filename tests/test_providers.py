@@ -16,10 +16,7 @@ class TestChatMessage:
 
     def test_chat_message_creation(self):
         """Test basic ChatMessage creation."""
-        message = ChatMessage(
-            role=MessageRole.USER,
-            content="Hello world"
-        )
+        message = ChatMessage(role=MessageRole.USER, content="Hello world")
         assert message.role == MessageRole.USER
         assert message.content == "Hello world"
         assert message.name is None
@@ -30,7 +27,7 @@ class TestChatMessage:
         message = ChatMessage(
             role=MessageRole.USER,
             content="What's in this image?",
-            images=["http://example.com/image.jpg"]
+            images=["http://example.com/image.jpg"],
         )
         assert len(message.images) == 1
 
@@ -52,17 +49,14 @@ class TestLiteLlmProviderInitialization:
         """Test creating a LiteLLM provider."""
         provider = LiteLlmProvider(
             provider_id="test-provider",
-            config={"api_key": "test-key", "base_url": "http://localhost"}
+            config={"api_key": "test-key", "base_url": "http://localhost"},
         )
         assert provider.provider_id == "test-provider"
         assert provider.provider_type == "litellm"
 
     def test_litellm_provider_with_minimal_config(self):
         """Test LiteLLM provider with minimal configuration."""
-        provider = LiteLlmProvider(
-            provider_id="minimal",
-            config={}
-        )
+        provider = LiteLlmProvider(provider_id="minimal", config={})
         assert provider.provider_id == "minimal"
 
 
@@ -72,17 +66,18 @@ class TestLiteLlmChatCompletion:
     @pytest.mark.asyncio
     async def test_chat_completion_basic(self):
         """Test basic chat completion."""
-        provider = LiteLlmProvider(
-            provider_id="test",
-            config={}
-        )
+        provider = LiteLlmProvider(provider_id="test", config={})
 
         mock_response = Mock()
         mock_response.choices = [Mock()]
         mock_response.choices[0].message = {"content": "Hello!"}
         mock_response.choices[0].finish_reason = "stop"
         mock_response.model = "gpt-4o"
-        mock_response.usage = {"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15}
+        mock_response.usage = {
+            "prompt_tokens": 10,
+            "completion_tokens": 5,
+            "total_tokens": 15,
+        }
 
         with patch("litellm.acompletion", return_value=mock_response):
             messages = [ChatMessage(role=MessageRole.USER, content="Hi")]
@@ -101,14 +96,18 @@ class TestLiteLlmChatCompletion:
         mock_response.choices[0].message = {"content": "Response"}
         mock_response.choices[0].finish_reason = "stop"
         mock_response.model = "gpt-4o"
-        mock_response.usage = {"prompt_tokens": 5, "completion_tokens": 5, "total_tokens": 10}
+        mock_response.usage = {
+            "prompt_tokens": 5,
+            "completion_tokens": 5,
+            "total_tokens": 10,
+        }
 
-        with patch("litellm.acompletion", return_value=mock_response) as mock_completion:
+        with patch(
+            "litellm.acompletion", return_value=mock_response
+        ) as mock_completion:
             messages = [ChatMessage(role=MessageRole.USER, content="Test")]
             await provider.chat_completion(
-                messages=messages,
-                model="gpt-4o",
-                temperature=0.5
+                messages=messages, model="gpt-4o", temperature=0.5
             )
 
             # Verify temperature was passed
@@ -126,13 +125,12 @@ class TestLiteLlmEmbedding:
 
         mock_response = {
             "data": [{"embedding": [0.1, 0.2, 0.3], "index": 0}],
-            "usage": {"total_tokens": 5}
+            "usage": {"total_tokens": 5},
         }
 
         with patch("litellm.embedding", return_value=mock_response):
             response = await provider.generate_embedding(
-                text="Hello world",
-                model="text-embedding-3-small"
+                text="Hello world", model="text-embedding-3-small"
             )
 
             assert len(response.embedding) == 3

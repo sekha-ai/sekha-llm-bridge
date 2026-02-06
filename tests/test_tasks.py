@@ -22,7 +22,9 @@ class TestEmbedTextTask:
             "usage": {"total_tokens": 5},
         }
 
-        with patch("sekha_llm_bridge.tasks.litellm.embedding", return_value=mock_response):
+        with patch(
+            "sekha_llm_bridge.tasks.litellm.embedding", return_value=mock_response
+        ):
             result = embed_text_task("Hello world")
 
             assert result == [0.1, 0.2, 0.3, 0.4]
@@ -34,7 +36,9 @@ class TestEmbedTextTask:
             "data": [{"embedding": [0.5, 0.6], "index": 0}],
         }
 
-        with patch("sekha_llm_bridge.tasks.litellm.embedding", return_value=mock_response) as mock_embed:
+        with patch(
+            "sekha_llm_bridge.tasks.litellm.embedding", return_value=mock_response
+        ) as mock_embed:
             embed_text_task("Test text", model="custom-model")
 
             call_args = mock_embed.call_args
@@ -46,7 +50,9 @@ class TestEmbedTextTask:
             "data": [{"embedding": [0.1, 0.2], "index": 0}],
         }
 
-        with patch("sekha_llm_bridge.tasks.litellm.embedding", return_value=mock_response) as mock_embed:
+        with patch(
+            "sekha_llm_bridge.tasks.litellm.embedding", return_value=mock_response
+        ) as mock_embed:
             with patch("sekha_llm_bridge.tasks.settings") as mock_settings:
                 mock_settings.embedding_model = "default-embedding-model"
                 embed_text_task("Test")
@@ -56,7 +62,10 @@ class TestEmbedTextTask:
 
     def test_embed_text_error_handling(self):
         """Test embedding error handling."""
-        with patch("sekha_llm_bridge.tasks.litellm.embedding", side_effect=Exception("API Error")):
+        with patch(
+            "sekha_llm_bridge.tasks.litellm.embedding",
+            side_effect=Exception("API Error"),
+        ):
             with pytest.raises(Exception, match="API Error"):
                 embed_text_task("Test")
 
@@ -71,7 +80,9 @@ class TestSummarizeMessagesTask:
         mock_response.choices = [Mock()]
         mock_response.choices[0].message = {"content": "Summary of messages"}
 
-        with patch("sekha_llm_bridge.tasks.litellm.completion", return_value=mock_response):
+        with patch(
+            "sekha_llm_bridge.tasks.litellm.completion", return_value=mock_response
+        ):
             result = summarize_messages_task(messages, "brief")
 
             assert result == "Summary of messages"
@@ -90,7 +101,9 @@ class TestExtractEntitiesTask:
         mock_response.choices = [Mock()]
         mock_response.choices[0].message = {"content": json.dumps(entities)}
 
-        with patch("sekha_llm_bridge.tasks.litellm.completion", return_value=mock_response):
+        with patch(
+            "sekha_llm_bridge.tasks.litellm.completion", return_value=mock_response
+        ):
             result = extract_entities_task("John Doe works at Acme Corp")
 
             assert len(result) == 2
@@ -107,7 +120,9 @@ class TestScoreImportanceTask:
         mock_response.choices = [Mock()]
         mock_response.choices[0].message = {"content": "7"}
 
-        with patch("sekha_llm_bridge.tasks.litellm.completion", return_value=mock_response):
+        with patch(
+            "sekha_llm_bridge.tasks.litellm.completion", return_value=mock_response
+        ):
             result = score_importance_task("Important decision made today")
 
             assert result == 7.0

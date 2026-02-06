@@ -1,6 +1,5 @@
 """Integration tests for v2 implementation."""
 
-
 from sekha_llm_bridge.config import (
     ProviderConfig,
     ModelConfig,
@@ -18,7 +17,7 @@ class TestProviderConfigIntegration:
             id="test-provider",
             provider_type=ProviderType.LITELLM,
             base_url="http://localhost:8000",
-            models=[]
+            models=[],
         )
         assert config.id == "test-provider"
         assert config.provider_type == ProviderType.LITELLM
@@ -26,9 +25,7 @@ class TestProviderConfigIntegration:
     def test_model_config_creation(self):
         """Test creating a model config."""
         model = ModelConfig(
-            model_id="gpt-4o",
-            task=ModelTask.CHAT_SMART,
-            context_window=128000
+            model_id="gpt-4o", task=ModelTask.CHAT_SMART, context_window=128000
         )
         assert model.model_id == "gpt-4o"
         assert model.task == ModelTask.CHAT_SMART
@@ -37,15 +34,11 @@ class TestProviderConfigIntegration:
         """Test creating a provider with multiple models."""
         models = [
             ModelConfig(
-                model_id="gpt-4o",
-                task=ModelTask.CHAT_SMART,
-                context_window=128000
+                model_id="gpt-4o", task=ModelTask.CHAT_SMART, context_window=128000
             ),
             ModelConfig(
-                model_id="gpt-4o-mini",
-                task=ModelTask.CHAT_SMALL,
-                context_window=128000
-            )
+                model_id="gpt-4o-mini", task=ModelTask.CHAT_SMALL, context_window=128000
+            ),
         ]
 
         config = ProviderConfig(
@@ -53,7 +46,7 @@ class TestProviderConfigIntegration:
             provider_type=ProviderType.OPENAI,
             base_url="https://api.openai.com/v1",
             api_key="${OPENAI_API_KEY}",
-            models=models
+            models=models,
         )
 
         assert len(config.models) == 2

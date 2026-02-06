@@ -105,9 +105,7 @@ class TestModelRegistryInitialization:
 
     def test_registry_initializes_successfully(self, mock_settings):
         """Test registry initializes with mock settings."""
-        with patch(
-            "sekha_llm_bridge.registry.LiteLlmProvider"
-        ) as mock_provider_class:
+        with patch("sekha_llm_bridge.registry.LiteLlmProvider") as mock_provider_class:
             mock_provider_class.return_value = Mock(provider_id="test-provider")
             registry = ModelRegistry()
 
@@ -127,9 +125,7 @@ class TestModelRegistryInitialization:
 
     def test_provider_creation(self, mock_settings):
         """Test _create_provider method."""
-        with patch(
-            "sekha_llm_bridge.registry.LiteLlmProvider"
-        ) as mock_provider_class:
+        with patch("sekha_llm_bridge.registry.LiteLlmProvider") as mock_provider_class:
             mock_provider_class.return_value = Mock()
             registry = ModelRegistry()
 
@@ -277,7 +273,9 @@ class TestRoutingWithFallback:
                 failure_threshold=5, timeout_secs=60, success_threshold=2
             )
 
-            with patch("sekha_llm_bridge.registry.LiteLlmProvider") as mock_provider_class:
+            with patch(
+                "sekha_llm_bridge.registry.LiteLlmProvider"
+            ) as mock_provider_class:
                 mock_provider_class.side_effect = lambda id, _: Mock(provider_id=id)
 
                 registry = ModelRegistry()
@@ -394,9 +392,7 @@ class TestProviderHealth:
 
     def test_get_provider_health(self, mock_settings):
         """Test getting provider health status."""
-        with patch(
-            "sekha_llm_bridge.registry.LiteLlmProvider"
-        ) as mock_provider_class:
+        with patch("sekha_llm_bridge.registry.LiteLlmProvider") as mock_provider_class:
             mock_provider = Mock()
             mock_provider.provider_id = "test-provider"
             mock_provider.provider_type = "litellm"
@@ -412,9 +408,7 @@ class TestProviderHealth:
 
     def test_health_includes_circuit_breaker_stats(self, mock_settings):
         """Test health includes circuit breaker statistics."""
-        with patch(
-            "sekha_llm_bridge.registry.LiteLlmProvider"
-        ) as mock_provider_class:
+        with patch("sekha_llm_bridge.registry.LiteLlmProvider") as mock_provider_class:
             mock_provider = Mock()
             mock_provider.provider_id = "test-provider"
             mock_provider.provider_type = "litellm"

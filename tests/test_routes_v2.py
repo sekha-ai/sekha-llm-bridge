@@ -201,9 +201,7 @@ class TestRouteRequestEndpoint:
         """Test routing when no provider is available."""
         with patch(
             "sekha_llm_bridge.routes_v2.registry.route_with_fallback",
-            new=AsyncMock(
-                side_effect=RuntimeError("No providers available for task")
-            ),
+            new=AsyncMock(side_effect=RuntimeError("No providers available for task")),
         ):
             response = client.post("/api/v1/route", json={"task": "chat_smart"})
 

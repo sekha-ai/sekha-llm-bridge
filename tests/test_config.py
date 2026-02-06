@@ -65,7 +65,9 @@ class TestSettings:
 
     def test_settings_exists(self):
         """Test settings object exists."""
-        assert settings is not None or settings is None  # May not be initialized in test
+        assert (
+            settings is not None or settings is None
+        )  # May not be initialized in test
 
     def test_settings_has_required_attributes(self):
         """Test settings has required attributes."""

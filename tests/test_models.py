@@ -368,14 +368,10 @@ class TestModelValidation:
         """Test nested model validation."""
         # Invalid nested message
         with pytest.raises(ValidationError):
-            ChatCompletionRequest(
-                messages=[{"role": "user"}]  # Missing content
-            )
+            ChatCompletionRequest(messages=[{"role": "user"}])  # Missing content
 
         # Valid nested message
-        request = ChatCompletionRequest(
-            messages=[{"role": "user", "content": "Test"}]
-        )
+        request = ChatCompletionRequest(messages=[{"role": "user", "content": "Test"}])
         assert len(request.messages) == 1
 
     def test_optional_fields(self):
