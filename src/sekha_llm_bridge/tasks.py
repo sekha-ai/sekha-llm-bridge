@@ -1,7 +1,9 @@
 from typing import List
+
 import litellm
-from .workers.celery_app import celery_app
+
 from .config import settings
+from .workers.celery_app import celery_app
 
 
 @celery_app.task(name="tasks.embed_text")
