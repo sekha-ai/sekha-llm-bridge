@@ -14,7 +14,7 @@ jobs:
     
     strategy:
       matrix:
-        python-version: ['3.12']
+        python-version: ['3.14']
     
     steps:
     - name: Checkout code
@@ -40,14 +40,14 @@ jobs:
           --junitxml=junit/test-results-${{ matrix.python-version }}.xml
     
     - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v4
+      uses: codecov/codecov-action@v5
       with:
-        file: ./coverage.xml
+        files: ./coverage.xml
         flags: unit-tests
         name: codecov-${{ matrix.python-version }}
     
     - name: Upload test results
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       if: always()
       with:
         name: test-results-${{ matrix.python-version }}
@@ -65,12 +65,12 @@ jobs:
     
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
     
-    - name: Set up Python 3.12
-      uses: actions/setup-python@v5
+    - name: Set up Python 3.14
+      uses: actions/setup-python@v6
       with:
-        python-version: '3.12'
+        python-version: '3.14'
         cache: 'pip'
     
     - name: Install dependencies
@@ -95,7 +95,7 @@ jobs:
           --junitxml=junit/integration-results.xml
     
     - name: Upload test results
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       if: always()
       with:
         name: integration-results
@@ -107,12 +107,12 @@ jobs:
     
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
     
-    - name: Set up Python 3.12
-      uses: actions/setup-python@v5
+    - name: Set up Python 3.14
+      uses: actions/setup-python@v6
       with:
-        python-version: '3.12'
+        python-version: '3.14'
         cache: 'pip'
     
     - name: Install dependencies
