@@ -49,7 +49,7 @@ jobs:
         run: ruff check .
 
       - name: Run black formatting check
-        run: black --check .
+        run: black --check src/ tests/
 
       - name: Run mypy type checking
         run: mypy src/sekha_llm_bridge --ignore-missing-imports
@@ -94,36 +94,19 @@ jobs:
             ${{ runner.os }}-pip-${{ matrix.python-version }}-
             ${{ runner.os }}-pip-
 
-      - name: Start Ollama
-        run: |
-          docker run -d \
-            --name ollama \
-            -p 11434:11434 \
-            ollama/ollama:latest
-          # Wait for Ollama API
-          for i in {1..60}; do
-            if curl -f http://localhost:11434/api/tags; then
-              echo "Ollama ready"
-              break
-            fi
-            sleep 2
-          done
-
-      - name: Pull test models
-        run: |
-          docker exec ollama ollama pull nomic-embed-text:latest
-          echo "Test models ready"
-
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pytest pytest-cov pytest-asyncio
           pip install -r requirements.txt
           pip install -e .
 
       - name: Run unit tests
         run: |
-          pytest tests/ -v --cov=sekha_llm_bridge --cov-report=xml --cov-report=term-missing
+          pytest tests/ -m "not integration and not e2e" \
+            --cov=sekha_llm_bridge \
+            --cov-report=xml \
+            --cov-report=term-missing \
+            --junitxml=junit/test-results-${{ matrix.python-version }}.xml
 
       - name: Upload coverage to Codecov
         if: matrix.python-version == '3.12'
@@ -200,7 +183,11 @@ jobs:
             fi
             sleep 2
           done
-          docker exec ollama ollama pull nomic-embed-text:latest
+
+      - name: Pull test models for integration tests
+        run: |
+          docker exec ollama ollama pull nomic-embed-text
+          docker exec ollama ollama pull llama3.1:8b
 
       - name: Build controller
         working-directory: controller
@@ -236,7 +223,7 @@ jobs:
           REDIS_URL: ${{ env.REDIS_URL }}
           CONTROLLER_URL: http://localhost:8080
         run: |
-          pytest tests/integration/ -v
+          pytest tests/integration/ -v -m integration
 
       - name: Cleanup
         if: always()
