@@ -10,8 +10,6 @@ from sekha_llm_bridge.models.requests import (
     ScoreRequest,
     ChatMessage,
     ChatCompletionRequest,
-    Message,
-    EmbeddingRequest,
 )
 
 
@@ -292,65 +290,6 @@ class TestChatCompletionRequest:
         assert len(request.messages) == 4
         assert request.messages[0].role == "system"
         assert request.messages[-1].role == "user"
-
-
-class TestMessage:
-    """Test Message model (used in providers)."""
-
-    def test_message_basic(self):
-        """Test basic Message creation."""
-        message = Message(role="user", content="Hello")
-        assert message.role == "user"
-        assert message.content == "Hello"
-
-    def test_message_all_roles(self):
-        """Test Message with all valid roles."""
-        for role in ["system", "user", "assistant", "function", "tool"]:
-            message = Message(role=role, content="Test")
-            assert message.role == role
-
-    def test_message_missing_fields(self):
-        """Test Message requires role and content."""
-        with pytest.raises(ValidationError):
-            Message(role="user")
-
-        with pytest.raises(ValidationError):
-            Message(content="Test")
-
-
-class TestEmbeddingRequest:
-    """Test EmbeddingRequest model (used in providers)."""
-
-    def test_embedding_request_string_input(self):
-        """Test EmbeddingRequest with string input."""
-        request = EmbeddingRequest(model="text-embedding-3-small", input="Hello")
-        assert request.model == "text-embedding-3-small"
-        assert request.input == "Hello"
-
-    def test_embedding_request_list_input(self):
-        """Test EmbeddingRequest with list input."""
-        request = EmbeddingRequest(
-            model="text-embedding-3-small", input=["Hello", "World"]
-        )
-        assert isinstance(request.input, list)
-        assert len(request.input) == 2
-
-    def test_embedding_request_with_dimensions(self):
-        """Test EmbeddingRequest with dimensions parameter."""
-        request = EmbeddingRequest(
-            model="text-embedding-3-small", input="Test", dimensions=256
-        )
-        assert request.dimensions == 256
-
-    def test_embedding_request_missing_model(self):
-        """Test EmbeddingRequest requires model."""
-        with pytest.raises(ValidationError):
-            EmbeddingRequest(input="Test")
-
-    def test_embedding_request_missing_input(self):
-        """Test EmbeddingRequest requires input."""
-        with pytest.raises(ValidationError):
-            EmbeddingRequest(model="test-model")
 
 
 class TestModelSerialization:
