@@ -60,7 +60,7 @@ llm-bridge = "sekha_llm_bridge.main:run"
 line-length = 88
 target-version = ["py312", "py314"]
 include = '\.pyi?$'
-extend-exclude = '''
+exclude = '''
 /(
   # directories
   \.eggs
