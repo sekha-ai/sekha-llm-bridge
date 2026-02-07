@@ -3,12 +3,12 @@
 import asyncio
 import logging
 from datetime import datetime
-from typing import Any, AsyncIterator, Dict, List, Optional
+from typing import Any, AsyncIterator, Dict, List, Optional, Union
 
 import litellm
 
 from .base import (ChatMessage, ChatResponse, EmbeddingResponse, LlmProvider,
-                   ModelInfo, ProviderAuthError, ProviderError,
+                   MessageRole, ModelInfo, ProviderAuthError, ProviderError,
                    ProviderRateLimitError, ProviderTimeoutError)
 
 logger = logging.getLogger(__name__)
@@ -82,7 +82,7 @@ class LiteLlmProvider(LlmProvider):
         """
         # If already prefixed, return as-is
         if "/" in model:
-            return model
+            return str(model)
 
         # For Ollama, prefix with 'ollama/'
         if self._provider_type == "ollama":
@@ -93,7 +93,7 @@ class LiteLlmProvider(LlmProvider):
             return f"openrouter/{model}"
 
         # For OpenAI and Anthropic, LiteLLM handles it
-        return model
+        return str(model)
 
     async def chat_completion(
         self,
@@ -307,7 +307,7 @@ class LiteLlmProvider(LlmProvider):
 
         try:
             # Try a simple completion with minimal tokens
-            test_messages = [ChatMessage(role="user", content="Hi")]
+            test_messages = [ChatMessage(role=MessageRole.USER, content="Hi")]
 
             # Get first available model from config
             test_model = self.config.get("models", [{}])[0].get("model_id")
@@ -350,15 +350,15 @@ class LiteLlmProvider(LlmProvider):
 
     def _convert_messages(self, messages: List[ChatMessage]) -> List[Dict[str, Any]]:
         """Convert ChatMessage objects to LiteLLM format."""
-        litellm_messages = []
+        litellm_messages: List[Dict[str, Any]] = []
 
         for msg in messages:
-            message_dict = {"role": msg.role.value, "content": msg.content}
+            message_dict: Dict[str, Any] = {"role": msg.role.value, "content": msg.content}
 
             # Handle images for vision models
             if msg.images:
                 # LiteLLM supports vision in content array format
-                content_parts = [{"type": "text", "text": msg.content}]
+                content_parts: List[Dict[str, Any]] = [{"type": "text", "text": msg.content}]
 
                 for image in msg.images:
                     if image.startswith("http"):
