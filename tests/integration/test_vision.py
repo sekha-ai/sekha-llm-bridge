@@ -10,14 +10,14 @@ Tests validate:
 """
 
 import base64
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 from sekha_llm_bridge.config import ModelTask, ProviderConfig, ProviderType
 from sekha_llm_bridge.providers.base import ChatMessage, MessageRole
 from sekha_llm_bridge.providers.litellm_provider import LiteLlmProvider
-from sekha_llm_bridge.registry import registry, CachedModelInfo
+from sekha_llm_bridge.registry import CachedModelInfo, registry
 
 
 class TestVisionRouting:
@@ -98,7 +98,9 @@ class TestVisionRouting:
         ]
 
         with patch.object(registry, "model_cache", mock_cache):
-            with patch("sekha_llm_bridge.registry.get_settings", return_value=mock_settings):
+            with patch(
+                "sekha_llm_bridge.registry.get_settings", return_value=mock_settings
+            ):
                 # Get candidates with vision requirement - test filtering directly
                 candidates = registry._get_candidates(
                     task=ModelTask.CHAT_SMART,
@@ -355,7 +357,9 @@ class TestVisionProviderFallback:
                     # All circuit breakers open
                     mock_cbs.get.return_value = MagicMock(is_open=lambda: True)
 
-                    with pytest.raises(RuntimeError, match="No suitable providers available"):
+                    with pytest.raises(
+                        RuntimeError, match="No suitable providers available"
+                    ):
                         await registry.route_with_fallback(
                             task=ModelTask.CHAT_SMART,
                             require_vision=True,

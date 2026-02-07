@@ -42,6 +42,7 @@ class TestRoutingWithFallback:
                 registry, "providers", {"provider1": provider1, "provider2": provider2}
             ):
                 with patch.object(registry, "circuit_breakers") as mock_cbs:
+
                     def cb_side_effect(pid):
                         if pid == "provider1":
                             return Mock(is_open=lambda: True)  # Open - blocked
@@ -49,7 +50,9 @@ class TestRoutingWithFallback:
 
                     mock_cbs.get.side_effect = cb_side_effect
 
-                    with patch("sekha_llm_bridge.registry.estimate_cost", return_value=0.01):
+                    with patch(
+                        "sekha_llm_bridge.registry.estimate_cost", return_value=0.01
+                    ):
                         # Should fallback to provider2
                         result = await registry.route_with_fallback(
                             task=ModelTask.CHAT_SMALL

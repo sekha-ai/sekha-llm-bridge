@@ -5,8 +5,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from fastapi.testclient import TestClient
 
-from sekha_llm_bridge.main import app
 from sekha_llm_bridge import routes_v2
+from sekha_llm_bridge.main import app
 
 client = TestClient(app)
 
@@ -37,7 +37,7 @@ class TestHealthEndpoints:
                 "models_count": 3,
             },
         }
-        
+
         with patch.object(
             routes_v2.registry,
             "get_provider_health",
@@ -78,7 +78,7 @@ class TestModelsEndpoint:
                 "supports_audio": False,
             },
         ]
-        
+
         with patch.object(
             routes_v2.registry,
             "list_all_models",

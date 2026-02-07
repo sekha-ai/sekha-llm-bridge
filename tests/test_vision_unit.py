@@ -175,7 +175,9 @@ class TestVisionRouting:
                 with patch.object(registry, "circuit_breakers") as mock_cbs:
                     mock_cbs.get.return_value = Mock(is_open=lambda: False)
 
-                    with patch("sekha_llm_bridge.registry.estimate_cost", return_value=0.01):
+                    with patch(
+                        "sekha_llm_bridge.registry.estimate_cost", return_value=0.01
+                    ):
                         result = await registry.route_with_fallback(
                             task=ModelTask.CHAT_SMART,
                             require_vision=True,

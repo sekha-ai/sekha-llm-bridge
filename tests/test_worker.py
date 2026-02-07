@@ -1,8 +1,6 @@
 """Comprehensive tests for Celery worker integration."""
 
-from unittest.mock import Mock, patch
-
-import pytest
+from unittest.mock import patch
 
 from sekha_llm_bridge.tasks import (
     embed_text_task,
@@ -57,6 +55,8 @@ class TestTaskExecution:
             "data": [{"embedding": [0.1, 0.2], "index": 0}],
         }
 
-        with patch("sekha_llm_bridge.tasks.litellm.embedding", return_value=mock_response):
+        with patch(
+            "sekha_llm_bridge.tasks.litellm.embedding", return_value=mock_response
+        ):
             result = embed_text_task("Test text")
             assert result == [0.1, 0.2]

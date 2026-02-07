@@ -364,7 +364,7 @@ class LiteLlmProvider(LlmProvider):
         for msg in messages:
             # Handle role - it can be either MessageRole enum or already a string
             role_str = msg.role if isinstance(msg.role, str) else msg.role.value
-            
+
             message_dict: Dict[str, Any] = {
                 "role": role_str,
                 "content": msg.content,

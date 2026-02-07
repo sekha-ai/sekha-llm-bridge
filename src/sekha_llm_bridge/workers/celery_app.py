@@ -1,6 +1,7 @@
 """Celery configuration for background jobs"""
 
 from functools import wraps
+
 from celery import Celery
 
 from sekha_llm_bridge.config import get_settings

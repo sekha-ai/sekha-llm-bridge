@@ -98,9 +98,7 @@ class LLMClient:
             from sekha_llm_bridge.providers.base import ChatMessage, MessageRole
 
             chat_messages = [
-                ChatMessage(
-                    role=MessageRole(msg["role"]), content=msg["content"]
-                )
+                ChatMessage(role=MessageRole(msg["role"]), content=msg["content"])
                 for msg in messages
             ]
 

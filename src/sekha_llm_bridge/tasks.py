@@ -9,8 +9,8 @@ from typing import List, cast
 
 import litellm
 
-from .config import get_settings
 from . import config
+from .config import get_settings
 from .workers.celery_app import celery_app
 
 # Expose global_settings for tests to patch

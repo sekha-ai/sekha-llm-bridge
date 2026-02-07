@@ -101,7 +101,7 @@ def get_model_pricing(model_id: str) -> Optional[ModelPricing]:
     """
     if not model_id:
         return None
-        
+
     # Try exact match first
     if model_id in PRICING_TABLE:
         return PRICING_TABLE[model_id]

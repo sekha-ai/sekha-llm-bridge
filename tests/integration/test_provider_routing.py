@@ -13,8 +13,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from sekha_llm_bridge.config import ModelTask, ProviderConfig, ProviderType, ModelConfig
-from sekha_llm_bridge.registry import registry, CachedModelInfo
+from sekha_llm_bridge.config import ModelTask, ProviderConfig, ProviderType
+from sekha_llm_bridge.registry import CachedModelInfo, registry
 
 
 class TestTaskBasedRouting:
@@ -207,7 +207,9 @@ class TestVisionRouting:
         ]
 
         with patch.object(registry, "model_cache", mock_cache):
-            with patch("sekha_llm_bridge.registry.get_settings", return_value=mock_settings):
+            with patch(
+                "sekha_llm_bridge.registry.get_settings", return_value=mock_settings
+            ):
                 candidates = registry._get_candidates(
                     task=ModelTask.CHAT_SMART,
                     require_vision=True,
@@ -372,10 +374,10 @@ class TestCircuitBreakerIntegration:
                     # All circuit breakers open
                     mock_cbs.get.return_value = MagicMock(is_open=lambda: True)
 
-                    with pytest.raises(RuntimeError, match="No suitable providers available"):
-                        await registry.route_with_fallback(
-                            task=ModelTask.CHAT_SMALL
-                        )
+                    with pytest.raises(
+                        RuntimeError, match="No suitable providers available"
+                    ):
+                        await registry.route_with_fallback(task=ModelTask.CHAT_SMALL)
 
 
 class TestPreferredModelRouting:

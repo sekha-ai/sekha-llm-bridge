@@ -46,7 +46,11 @@ class TestLiteLlmProviderInitialization:
         """Test creating a LiteLLM provider."""
         provider = LiteLlmProvider(
             provider_id="test-provider",
-            config={"provider_type": "ollama", "api_key": "test-key", "base_url": "http://localhost"},
+            config={
+                "provider_type": "ollama",
+                "api_key": "test-key",
+                "base_url": "http://localhost",
+            },
         )
         assert provider.provider_id == "test-provider"
         # Provider type comes from config, defaults to "ollama"
@@ -151,8 +155,7 @@ class TestLiteLlmHealthCheck:
     async def test_health_check_healthy(self):
         """Test health check when provider is healthy."""
         provider = LiteLlmProvider(
-            provider_id="test",
-            config={"models": [{"model_id": "test-model"}]}
+            provider_id="test", config={"models": [{"model_id": "test-model"}]}
         )
 
         # Mock successful chat completion for health check

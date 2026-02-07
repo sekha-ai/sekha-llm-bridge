@@ -111,7 +111,5 @@ class TestCostLimitEnforcement:
         assert gpt4_mini_cost < gpt4_cost
 
         # Ollama is free
-        ollama_cost = estimate_cost(
-            "llama3.1:8b", input_tokens=1000, output_tokens=500
-        )
+        ollama_cost = estimate_cost("llama3.1:8b", input_tokens=1000, output_tokens=500)
         assert ollama_cost == 0.0
