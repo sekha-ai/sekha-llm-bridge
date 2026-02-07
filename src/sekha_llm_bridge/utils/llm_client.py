@@ -6,7 +6,7 @@ For now, using hardcoded defaults where settings don't match v2.0 config.
 
 import logging
 import os
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, cast
 
 import litellm
 from tenacity import retry, stop_after_attempt, wait_exponential
@@ -49,7 +49,8 @@ class LLMClient:
                 timeout=self.timeout,
             )
 
-            return response.data[0]["embedding"]
+            embedding = cast(List[float], response.data[0]["embedding"])
+            return embedding
 
         except Exception as e:
             logger.error(f"Embedding generation failed: {e}")
@@ -82,7 +83,8 @@ class LLMClient:
                 timeout=self.timeout,
             )
 
-            return response.choices[0].message.content
+            content = cast(str, response.choices[0].message.content)
+            return content
 
         except Exception as e:
             logger.error(f"LLM completion failed: {e}")
