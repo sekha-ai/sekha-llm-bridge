@@ -6,6 +6,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from sekha_llm_bridge.main import app
+from sekha_llm_bridge import routes_v2
 
 client = TestClient(app)
 
@@ -20,8 +21,9 @@ class TestHealthEndpoints:
             "openai": {"status": "healthy", "latency_ms": 200},
         }
         
-        with patch(
-            "sekha_llm_bridge.routes_v2.registry.get_provider_health",
+        with patch.object(
+            routes_v2.registry,
+            "get_provider_health",
             return_value=mock_health_data,
         ):
             response = client.get("/api/v1/health/providers")
@@ -51,11 +53,12 @@ class TestModelsEndpoint:
             },
         ]
         
-        with patch(
-            "sekha_llm_bridge.routes_v2.registry.list_all_models",
+        with patch.object(
+            routes_v2.registry,
+            "list_all_models",
             return_value=mock_models,
         ):
-            with patch.object("sekha_llm_bridge.routes_v2.registry", "_initialized", True):
+            with patch.object(routes_v2.registry, "_initialized", True):
                 response = client.get("/api/v1/models")
                 assert response.status_code == 200
                 models = response.json()
@@ -89,9 +92,10 @@ class TestRouteRequestEndpoint:
         mock_result.estimated_cost = 0.0
         mock_result.priority = 1
 
-        with patch("sekha_llm_bridge.routes_v2.registry._initialized", True):
-            with patch(
-                "sekha_llm_bridge.routes_v2.registry.route_with_fallback",
+        with patch.object(routes_v2.registry, "_initialized", True):
+            with patch.object(
+                routes_v2.registry,
+                "route_with_fallback",
                 new_callable=AsyncMock,
                 return_value=mock_result,
             ):
@@ -126,9 +130,10 @@ class TestRouteRequestEndpoint:
         mock_result.estimated_cost = 0.01
         mock_result.priority = 1
 
-        with patch("sekha_llm_bridge.routes_v2.registry._initialized", True):
-            with patch(
-                "sekha_llm_bridge.routes_v2.registry.route_with_fallback",
+        with patch.object(routes_v2.registry, "_initialized", True):
+            with patch.object(
+                routes_v2.registry,
+                "route_with_fallback",
                 new_callable=AsyncMock,
                 return_value=mock_result,
             ):
@@ -151,9 +156,10 @@ class TestRouteRequestEndpoint:
         mock_result.estimated_cost = 0.0
         mock_result.priority = 2
 
-        with patch("sekha_llm_bridge.routes_v2.registry._initialized", True):
-            with patch(
-                "sekha_llm_bridge.routes_v2.registry.route_with_fallback",
+        with patch.object(routes_v2.registry, "_initialized", True):
+            with patch.object(
+                routes_v2.registry,
+                "route_with_fallback",
                 new_callable=AsyncMock,
                 return_value=mock_result,
             ):
