@@ -77,7 +77,7 @@ class TestVisionRouting:
                 ),
             ]
 
-            # Get candidates with vision requirement
+            # Get candidates with vision requirement - test filtering directly
             candidates = registry._get_candidates(
                 task=ModelTask.CHAT_SMART,
                 require_vision=True,
@@ -95,7 +95,7 @@ class TestVisionRouting:
             # No vision models available
             mock_candidates.return_value = []
 
-            with pytest.raises(RuntimeError, match="No providers available"):
+            with pytest.raises(RuntimeError, match="No suitable providers available"):
                 await registry.route_with_fallback(
                     task=ModelTask.CHAT_SMART,
                     require_vision=True,
@@ -156,6 +156,7 @@ class TestImageFormatHandling:
 
         # Create a small base64 image (1x1 pixel PNG)
         small_png = base64.b64encode(b"\x89PNG\r\n\x1a\n").decode()
+        # Pass as pre-formatted data URL
         base64_image = f"data:image/png;base64,{small_png}"
 
         messages = [
@@ -172,6 +173,7 @@ class TestImageFormatHandling:
         content = litellm_messages[0]["content"]
         image_part = next((c for c in content if c["type"] == "image_url"), None)
         assert image_part is not None
+        # Should preserve the data URL as-is (not double-wrap)
         assert image_part["image_url"]["url"].startswith("data:image/png;base64,")
 
     @pytest.mark.asyncio
@@ -331,7 +333,7 @@ class TestVisionProviderFallback:
                     # All circuit breakers open
                     mock_cbs.get.return_value = MagicMock(is_open=lambda: True)
 
-                    with pytest.raises(RuntimeError, match="No providers available"):
+                    with pytest.raises(RuntimeError, match="No suitable providers available"):
                         await registry.route_with_fallback(
                             task=ModelTask.CHAT_SMART,
                             require_vision=True,

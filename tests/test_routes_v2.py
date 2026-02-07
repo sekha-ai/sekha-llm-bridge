@@ -15,18 +15,22 @@ class TestHealthEndpoints:
 
     def test_providers_health(self):
         """Test /api/v1/health/providers endpoint."""
+        mock_health_data = {
+            "ollama": {"status": "healthy", "latency_ms": 100},
+            "openai": {"status": "healthy", "latency_ms": 200},
+        }
+        
         with patch(
             "sekha_llm_bridge.routes_v2.registry.get_provider_health",
-            return_value={
-                "ollama": {"status": "healthy", "latency_ms": 100},
-                "openai": {"status": "healthy", "latency_ms": 200},
-            },
+            return_value=mock_health_data,
         ):
             response = client.get("/api/v1/health/providers")
             assert response.status_code == 200
             data = response.json()
-            assert "ollama" in data
-            assert "openai" in data
+            # Response structure includes providers nested under "providers" key
+            assert "providers" in data
+            assert "ollama" in data["providers"]
+            assert "openai" in data["providers"]
 
 
 class TestModelsEndpoint:
@@ -34,20 +38,22 @@ class TestModelsEndpoint:
 
     def test_list_all_models(self):
         """Test /api/v1/models endpoint."""
+        mock_models = [
+            {
+                "model_id": "llama3.1:8b",
+                "provider_id": "ollama",
+                "task": "chat_small",
+            },
+            {
+                "model_id": "gpt-4o",
+                "provider_id": "openai",
+                "task": "chat_smart",
+            },
+        ]
+        
         with patch(
             "sekha_llm_bridge.routes_v2.registry.list_all_models",
-            return_value=[
-                {
-                    "model_id": "llama3.1:8b",
-                    "provider_id": "ollama",
-                    "task": "chat_small",
-                },
-                {
-                    "model_id": "gpt-4o",
-                    "provider_id": "openai",
-                    "task": "chat_smart",
-                },
-            ],
+            return_value=mock_models,
         ):
             response = client.get("/api/v1/models")
             assert response.status_code == 200
