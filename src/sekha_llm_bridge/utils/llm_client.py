@@ -11,7 +11,7 @@ from typing import Any, Dict, List, Optional, cast
 import litellm
 from tenacity import retry, stop_after_attempt, wait_exponential
 
-from sekha_llm_bridge.config import get_settings
+from sekha_llm_bridge.config import get_settings, settings
 
 logger = logging.getLogger(__name__)
 
