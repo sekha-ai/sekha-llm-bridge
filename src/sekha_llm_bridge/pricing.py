@@ -49,6 +49,13 @@ PRICING_TABLE: Dict[str, ModelPricing] = {
     "claude-3-haiku": ModelPricing(
         input_cost_per_1k=0.00025, output_cost_per_1k=0.00125
     ),
+    # Claude 3.5 Models (October 2024)
+    "claude-3-5-sonnet-20241022": ModelPricing(
+        input_cost_per_1k=0.003, output_cost_per_1k=0.015
+    ),
+    "claude-3-5-haiku-20241022": ModelPricing(
+        input_cost_per_1k=0.001, output_cost_per_1k=0.005
+    ),
     # Moonshot (Kimi)
     "kimi-2.5": ModelPricing(input_cost_per_1k=0.0001, output_cost_per_1k=0.0002),
     "moonshot-v1-8k": ModelPricing(
@@ -92,6 +99,9 @@ def get_model_pricing(model_id: str) -> Optional[ModelPricing]:
     Returns:
         ModelPricing if found, None otherwise
     """
+    if not model_id:
+        return None
+        
     # Try exact match first
     if model_id in PRICING_TABLE:
         return PRICING_TABLE[model_id]
@@ -122,13 +132,17 @@ def estimate_cost(
         is_embedding: Whether this is an embedding request
 
     Returns:
-        Estimated cost in USD
+        Estimated cost in USD (returns 0.0 for unknown models)
     """
     pricing = get_model_pricing(model_id)
 
     if not pricing:
         logger.warning(f"No pricing information for model: {model_id}")
         return 0.0
+
+    # Handle negative token counts
+    input_tokens = max(0, input_tokens)
+    output_tokens = max(0, output_tokens)
 
     if is_embedding and pricing.embedding_cost_per_1k is not None:
         # Use embedding-specific pricing
