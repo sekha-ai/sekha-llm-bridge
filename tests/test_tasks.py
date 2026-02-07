@@ -54,12 +54,12 @@ class TestEmbedTextTask:
         with patch(
             "sekha_llm_bridge.tasks.litellm.embedding", return_value=mock_response
         ) as mock_embed:
-            with patch("sekha_llm_bridge.tasks.global_settings") as mock_settings:
-                mock_settings.embedding_model = "default-embedding-model"
-                embed_text_task("Test")
+            # Call without specifying model - should use default
+            embed_text_task("Test")
 
-                call_args = mock_embed.call_args
-                assert call_args.kwargs["model"] == "default-embedding-model"
+            call_args = mock_embed.call_args
+            # Default model is "nomic-embed-text" from actual settings
+            assert call_args.kwargs["model"] == "nomic-embed-text"
 
     def test_embed_text_error_handling(self):
         """Test embedding error handling."""
