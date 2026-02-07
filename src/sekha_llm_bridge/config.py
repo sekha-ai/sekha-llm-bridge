@@ -27,7 +27,6 @@ class ModelTask(str, Enum):
     CHAT_SMART = "chat_smart"
     VISION = "vision"
     AUDIO = "audio"
-    IMAGE_GENERATION = "image_generation"  # For compatibility with tests
 
 
 class VisionCapabilities(BaseModel):
@@ -119,9 +118,6 @@ class DefaultModels(BaseModel):
     chat_smart: Optional[str] = Field(
         default=None, description="Smart chat model (expensive)"
     )
-    chat_small: Optional[str] = Field(
-        default=None, description="Small chat model"
-    )
     chat_vision: Optional[str] = Field(
         default=None, description="Vision-capable chat model"
     )
@@ -154,9 +150,6 @@ class RoutingConfig(BaseModel):
     max_cost_per_request: Optional[float] = Field(
         default=None, description="Maximum cost per request in USD"
     )
-    cost_aware: bool = Field(
-        default=True, description="Enable cost-aware routing"
-    )
     circuit_breaker: CircuitBreakerConfig = Field(
         default_factory=lambda: CircuitBreakerConfig(),
         description="Circuit breaker settings",
@@ -168,7 +161,7 @@ class Settings(BaseModel):
 
     version: str = Field(default="2.0", description="Configuration version")
     providers: List[ProviderConfig] = Field(
-        default=[], description="List of configured providers"
+        ..., description="List of configured providers"
     )
     default_models: DefaultModels = Field(
         default_factory=lambda: DefaultModels(), description="Default model preferences"
@@ -176,30 +169,12 @@ class Settings(BaseModel):
     routing: RoutingConfig = Field(
         default_factory=lambda: RoutingConfig(), description="Routing configuration"
     )
-    default_provider: Optional[str] = Field(
-        default=None, description="Default provider ID"
-    )
-    embedding_model: Optional[str] = Field(
-        default=None, description="Default embedding model"
-    )
-    summarization_model: Optional[str] = Field(
-        default=None, description="Default summarization model"
-    )
-    extraction_model: Optional[str] = Field(
-        default=None, description="Default extraction model"
-    )
-    importance_model: Optional[str] = Field(
-        default=None, description="Default importance scoring model"
-    )
 
     # Server settings
     server_host: str = Field(default="0.0.0.0", description="Server host")
     server_port: int = Field(default=5001, description="Server port")
     max_connections: int = Field(default=10, description="Max concurrent connections")
     log_level: str = Field(default="info", description="Logging level")
-    ollama_base_url: str = Field(
-        default="http://localhost:11434", description="Ollama base URL"
-    )
 
     # Celery/Worker settings
     celery_broker_url: str = Field(
@@ -212,8 +187,9 @@ class Settings(BaseModel):
 
     @validator("providers")
     def validate_providers(cls, v):
-        """Validate that at least one provider is configured (skip for testing)."""
-        # Allow empty providers for testing
+        """Validate that at least one provider is configured."""
+        if not v:
+            raise ValueError("At least one provider must be configured")
         return v
 
     @classmethod
@@ -224,8 +200,8 @@ class Settings(BaseModel):
         return cls(**config_dict)
 
 
-# Global settings instance - initialize with defaults for testing
-settings: Settings = Settings()
+# Global settings instance
+settings: Optional[Settings] = None
 
 
 def load_settings(config_path: str = "config.yaml") -> Settings:
