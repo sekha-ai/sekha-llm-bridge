@@ -4,6 +4,7 @@ Note: These tasks reference settings attributes that don't exist in the v2.0 con
 They should be refactored to use the provider registry instead.
 For now, adding assertions to satisfy mypy.
 """
+
 from typing import List, cast
 
 import litellm

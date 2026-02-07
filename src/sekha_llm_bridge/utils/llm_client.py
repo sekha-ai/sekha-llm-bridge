@@ -98,7 +98,7 @@ class LLMClient:
             settings = get_settings()
             embedding_model = settings.default_models.embedding or "nomic-embed-text"
             chat_model = settings.default_models.chat_smart or "llama3.1:8b"
-            
+
             async with httpx.AsyncClient(timeout=5.0) as client:
                 # Check if Ollama is running
                 response = await client.get(f"{self.ollama_base_url}/api/tags")

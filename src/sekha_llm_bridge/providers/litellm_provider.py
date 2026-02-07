@@ -7,9 +7,18 @@ from typing import Any, AsyncIterator, Dict, List, Optional, cast
 
 import litellm
 
-from .base import (ChatMessage, ChatResponse, EmbeddingResponse, LlmProvider,
-                   MessageRole, ModelInfo, ProviderAuthError, ProviderError,
-                   ProviderRateLimitError, ProviderTimeoutError)
+from .base import (
+    ChatMessage,
+    ChatResponse,
+    EmbeddingResponse,
+    LlmProvider,
+    MessageRole,
+    ModelInfo,
+    ProviderAuthError,
+    ProviderError,
+    ProviderRateLimitError,
+    ProviderTimeoutError,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -353,12 +362,17 @@ class LiteLlmProvider(LlmProvider):
         litellm_messages: List[Dict[str, Any]] = []
 
         for msg in messages:
-            message_dict: Dict[str, Any] = {"role": msg.role.value, "content": msg.content}
+            message_dict: Dict[str, Any] = {
+                "role": msg.role.value,
+                "content": msg.content,
+            }
 
             # Handle images for vision models
             if msg.images:
                 # LiteLLM supports vision in content array format
-                content_parts: List[Dict[str, Any]] = [{"type": "text", "text": msg.content}]
+                content_parts: List[Dict[str, Any]] = [
+                    {"type": "text", "text": msg.content}
+                ]
 
                 for image in msg.images:
                     if image.startswith("http"):

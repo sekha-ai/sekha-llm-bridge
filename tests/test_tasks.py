@@ -5,9 +5,12 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from sekha_llm_bridge.tasks import (embed_text_task, extract_entities_task,
-                                    score_importance_task,
-                                    summarize_messages_task)
+from sekha_llm_bridge.tasks import (
+    embed_text_task,
+    extract_entities_task,
+    score_importance_task,
+    summarize_messages_task,
+)
 
 
 class TestEmbedTextTask:

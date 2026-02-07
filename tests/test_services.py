@@ -5,15 +5,18 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from sekha_llm_bridge.models.requests import (EmbedRequest, ExtractRequest,
-                                              ScoreRequest, SummarizeRequest)
+from sekha_llm_bridge.models.requests import (
+    EmbedRequest,
+    ExtractRequest,
+    ScoreRequest,
+    SummarizeRequest,
+)
 from sekha_llm_bridge.services.embedding_service import embedding_service
-from sekha_llm_bridge.services.entity_extraction_service import \
-    entity_extraction_service
-from sekha_llm_bridge.services.importance_scorer import \
-    importance_scorer_service
-from sekha_llm_bridge.services.summarization_service import \
-    summarization_service
+from sekha_llm_bridge.services.entity_extraction_service import (
+    entity_extraction_service,
+)
+from sekha_llm_bridge.services.importance_scorer import importance_scorer_service
+from sekha_llm_bridge.services.summarization_service import summarization_service
 
 # ============================================
 # Embedding Service Tests
