@@ -4,7 +4,7 @@ Note: These tasks reference settings attributes that don't exist in the v2.0 con
 They should be refactored to use the provider registry instead.
 For now, adding assertions to satisfy mypy.
 """
-from typing import List
+from typing import List, cast
 
 import litellm
 
@@ -23,7 +23,8 @@ def embed_text_task(text: str, model: str | None = None) -> list[float]:
         input=text,
     )
     # LiteLLM returns OpenAI-style structure
-    return response["data"][0]["embedding"]
+    embedding = cast(list[float], response["data"][0]["embedding"])
+    return embedding
 
 
 @celery_app.task(name="tasks.summarize_messages")
@@ -52,7 +53,8 @@ def summarize_messages_task(
         temperature=0.2,
     )
 
-    return completion.choices[0].message["content"]
+    content = cast(str, completion.choices[0].message["content"])
+    return content
 
 
 @celery_app.task(name="tasks.extract_entities")
