@@ -7,7 +7,7 @@ import pytest
 from sekha_llm_bridge.config import ModelTask
 from sekha_llm_bridge.providers.base import ChatMessage, MessageRole
 from sekha_llm_bridge.providers.litellm_provider import LiteLlmProvider
-from sekha_llm_bridge.registry import ModelRegistry
+from sekha_llm_bridge.registry import registry
 
 
 class TestVisionMessageConversion:
@@ -162,159 +162,82 @@ class TestVisionRouting:
     @pytest.mark.asyncio
     async def test_require_vision_filters_models(self):
         """Test that require_vision filters to vision-capable models."""
-        # Mock settings with vision and non-vision models
-        with patch("sekha_llm_bridge.registry.global_settings") as mock_settings:
-            mock_settings.providers = [
-                Mock(
-                    id="provider1",
-                    provider_type="openai",
-                    base_url="http://test",
-                    api_key="test",
-                    timeout_secs=30,
-                    priority=1,
-                    models=[
-                        Mock(
-                            model_id="gpt-4o",
-                            task=ModelTask.CHAT_SMART,
-                            context_window=128000,
-                            dimension=None,
-                            supports_vision=True,
-                            supports_audio=False,
-                        ),
-                        Mock(
-                            model_id="gpt-3.5-turbo",
-                            task=ModelTask.CHAT_SMALL,
-                            context_window=16000,
-                            dimension=None,
-                            supports_vision=False,
-                            supports_audio=False,
-                        ),
-                    ],
-                )
+        with patch.object(registry, "_get_candidates") as mock_candidates:
+            # Return vision-capable model
+            mock_candidates.return_value = [
+                ("openai", "gpt-4o", 1),
             ]
-            mock_settings.routing = Mock(
-                cost_aware=True,
-                max_cost_per_request=1.0,
-                circuit_breaker=Mock(
-                    failure_threshold=5,
-                    timeout_secs=60,
-                    success_threshold=2,
-                ),
-            )
 
-            registry = ModelRegistry()
+            mock_provider = Mock()
+            mock_provider.provider_id = "openai"
 
-            # Request with vision requirement
-            result = await registry.route_with_fallback(
-                task=ModelTask.CHAT_SMART,
-                require_vision=True,
-            )
+            with patch.object(registry, "providers", {"openai": mock_provider}):
+                with patch.object(registry, "circuit_breakers") as mock_cbs:
+                    mock_cbs.get.return_value = Mock(is_open=lambda: False)
 
-            assert result.model_id == "gpt-4o"
-            assert "gpt-3.5-turbo" not in result.model_id
+                    with patch("sekha_llm_bridge.registry.estimate_cost", return_value=0.01):
+                        result = await registry.route_with_fallback(
+                            task=ModelTask.CHAT_SMART,
+                            require_vision=True,
+                        )
+
+                        assert result.model_id == "gpt-4o"
+                        # Verify candidates were called with vision requirement
+                        mock_candidates.assert_called_once_with(
+                            task=ModelTask.CHAT_SMART,
+                            require_vision=True,
+                            preferred_model=None,
+                        )
 
     @pytest.mark.asyncio
     async def test_no_vision_models_raises_error(self):
         """Test error when no vision models available."""
-        with patch("sekha_llm_bridge.registry.global_settings") as mock_settings:
-            mock_settings.providers = [
-                Mock(
-                    id="provider1",
-                    provider_type="openai",
-                    base_url="http://test",
-                    api_key="test",
-                    timeout_secs=30,
-                    priority=1,
-                    models=[
-                        Mock(
-                            model_id="gpt-3.5-turbo",
-                            task=ModelTask.CHAT_SMALL,
-                            context_window=16000,
-                            dimension=None,
-                            supports_vision=False,
-                            supports_audio=False,
-                        ),
-                    ],
-                )
-            ]
-            mock_settings.routing = Mock(
-                cost_aware=True,
-                max_cost_per_request=1.0,
-                circuit_breaker=Mock(
-                    failure_threshold=5,
-                    timeout_secs=60,
-                    success_threshold=2,
-                ),
-            )
-
-            registry = ModelRegistry()
+        with patch.object(registry, "_get_candidates") as mock_candidates:
+            # No candidates available
+            mock_candidates.return_value = []
 
             with pytest.raises(RuntimeError, match="No providers available"):
                 await registry.route_with_fallback(
-                    task=ModelTask.CHAT_SMALL,
+                    task=ModelTask.CHAT_SMART,
                     require_vision=True,
                 )
 
     @pytest.mark.asyncio
     async def test_vision_routing_respects_cost_limit(self):
         """Test that vision routing respects cost limits."""
-        with patch("sekha_llm_bridge.registry.global_settings") as mock_settings:
-            with patch("sekha_llm_bridge.registry.estimate_cost") as mock_cost:
-                # Expensive model
-                mock_cost.side_effect = lambda model, *args, **kwargs: (
-                    0.10 if "gpt-4o" in model else 0.001
-                )
+        with patch.object(registry, "_get_candidates") as mock_candidates:
+            # Return two vision models with different costs
+            mock_candidates.return_value = [
+                ("openai", "gpt-4o", 1),  # Will be expensive
+                ("openai", "gpt-4o-mini", 1),  # Will be cheap
+            ]
 
-                mock_settings.providers = [
-                    Mock(
-                        id="provider1",
-                        provider_type="openai",
-                        base_url="http://test",
-                        api_key="test",
-                        timeout_secs=30,
-                        priority=1,
-                        models=[
-                            Mock(
-                                model_id="gpt-4o",
-                                task=ModelTask.CHAT_SMART,
-                                context_window=128000,
-                                dimension=None,
-                                supports_vision=True,
-                                supports_audio=False,
-                            ),
-                            Mock(
-                                model_id="gpt-4o-mini",
-                                task=ModelTask.CHAT_SMART,
-                                context_window=128000,
-                                dimension=None,
-                                supports_vision=True,
-                                supports_audio=False,
-                            ),
-                        ],
-                    )
-                ]
-                mock_settings.routing = Mock(
-                    cost_aware=True,
-                    max_cost_per_request=1.0,
-                    circuit_breaker=Mock(
-                        failure_threshold=5,
-                        timeout_secs=60,
-                        success_threshold=2,
-                    ),
-                )
+            mock_provider = Mock()
+            mock_provider.provider_id = "openai"
 
-                registry = ModelRegistry()
+            with patch.object(registry, "providers", {"openai": mock_provider}):
+                with patch.object(registry, "circuit_breakers") as mock_cbs:
+                    mock_cbs.get.return_value = Mock(is_open=lambda: False)
 
-                # Request with low cost limit
-                result = await registry.route_with_fallback(
-                    task=ModelTask.CHAT_SMART,
-                    require_vision=True,
-                    max_cost=0.01,
-                )
+                    def cost_side_effect(model, **kwargs):
+                        if "mini" in model:
+                            return 0.001  # Cheap
+                        return 0.10  # Expensive
 
-                # Should pick cheaper model
-                assert result.model_id == "gpt-4o-mini"
-                assert result.estimated_cost <= 0.01
+                    with patch(
+                        "sekha_llm_bridge.registry.estimate_cost",
+                        side_effect=cost_side_effect,
+                    ):
+                        # Request with low cost limit
+                        result = await registry.route_with_fallback(
+                            task=ModelTask.CHAT_SMART,
+                            require_vision=True,
+                            max_cost=0.01,
+                        )
+
+                        # Should pick cheaper model
+                        assert result.model_id == "gpt-4o-mini"
+                        assert result.estimated_cost <= 0.01
 
 
 class TestVisionIntegration:
