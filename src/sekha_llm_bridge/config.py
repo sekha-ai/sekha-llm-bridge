@@ -167,6 +167,16 @@ class Settings(BaseModel):
     max_connections: int = Field(default=10, description="Max concurrent connections")
     log_level: str = Field(default="info", description="Logging level")
 
+    # Celery/Worker settings
+    celery_broker_url: str = Field(
+        default="redis://localhost:6379/0",
+        description="Celery broker URL for background tasks"
+    )
+    celery_result_backend: str = Field(
+        default="redis://localhost:6379/0",
+        description="Celery result backend URL"
+    )
+
     @validator("providers")
     def validate_providers(cls, v):
         """Validate that at least one provider is configured."""
