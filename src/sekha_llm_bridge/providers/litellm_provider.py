@@ -7,18 +7,9 @@ from typing import Any, AsyncIterator, Dict, List, Optional, cast
 
 import litellm
 
-from .base import (
-    ChatMessage,
-    ChatResponse,
-    EmbeddingResponse,
-    LlmProvider,
-    MessageRole,
-    ModelInfo,
-    ProviderAuthError,
-    ProviderError,
-    ProviderRateLimitError,
-    ProviderTimeoutError,
-)
+from .base import (ChatMessage, ChatResponse, EmbeddingResponse, LlmProvider,
+                   MessageRole, ModelInfo, ProviderAuthError, ProviderError,
+                   ProviderRateLimitError, ProviderTimeoutError)
 
 logger = logging.getLogger(__name__)
 

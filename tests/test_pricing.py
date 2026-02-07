@@ -1,11 +1,7 @@
 """Comprehensive tests for pricing module."""
 
-from sekha_llm_bridge.pricing import (
-    compare_costs,
-    estimate_cost,
-    find_cheapest_model,
-    get_model_pricing,
-)
+from sekha_llm_bridge.pricing import (compare_costs, estimate_cost,
+                                      find_cheapest_model, get_model_pricing)
 
 
 class TestGetModelPricing:
