@@ -30,7 +30,7 @@ def mock_settings_fixture():
     with patch("sekha_llm_bridge.config.get_settings", return_value=mock_settings):
         with patch("sekha_llm_bridge.config.settings", mock_settings):
             with patch("sekha_llm_bridge.registry.global_settings", mock_settings):
-                with patch("sekha_llm_bridge.tasks.settings", mock_settings):
+               # with patch("sekha_llm_bridge.tasks.settings", mock_settings):
                     yield mock_settings
 
 
