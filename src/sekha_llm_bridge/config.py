@@ -109,10 +109,10 @@ class ProviderConfig(BaseModel):
 class DefaultModels(BaseModel):
     """Default model preferences."""
     
-    embedding: Optional[str] = Field(None, description="Default embedding model")
-    chat_fast: Optional[str] = Field(None, description="Fast chat model (cheap)")
-    chat_smart: Optional[str] = Field(None, description="Smart chat model (expensive)")
-    chat_vision: Optional[str] = Field(None, description="Vision-capable chat model")
+    embedding: Optional[str] = Field(default=None, description="Default embedding model")
+    chat_fast: Optional[str] = Field(default=None, description="Fast chat model (cheap)")
+    chat_smart: Optional[str] = Field(default=None, description="Smart chat model (expensive)")
+    chat_vision: Optional[str] = Field(default=None, description="Vision-capable chat model")
 
 
 class CircuitBreakerConfig(BaseModel):
@@ -140,7 +140,7 @@ class RoutingConfig(BaseModel):
         description="Require vision-capable models when images are detected",
     )
     max_cost_per_request: Optional[float] = Field(
-        None, description="Maximum cost per request in USD"
+        default=None, description="Maximum cost per request in USD"
     )
     circuit_breaker: CircuitBreakerConfig = Field(
         default_factory=lambda: CircuitBreakerConfig(), description="Circuit breaker settings"
