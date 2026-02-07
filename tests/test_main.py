@@ -263,7 +263,7 @@ class TestApplicationConfiguration:
 
     def test_settings_loaded(self):
         """Test application settings are loaded."""
-        with patch("sekha_llm_bridge.main.settings") as mock_settings:
+        with patch("sekha_llm_bridge.main.global_settings") as mock_settings:
             # Settings should be accessible
             assert mock_settings is not None
 
