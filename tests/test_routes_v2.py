@@ -1,6 +1,6 @@
 """Comprehensive tests for API v2 routes."""
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -88,9 +88,12 @@ class TestRouteRequestEndpoint:
         mock_result.estimated_cost = 0.0
         mock_result.priority = 1
 
+        # Use AsyncMock for async function
+        async_mock = AsyncMock(return_value=mock_result)
+        
         with patch(
             "sekha_llm_bridge.routes_v2.registry.route_with_fallback",
-            return_value=mock_result,
+            async_mock,
         ):
             request_data = {
                 "task": "chat_small",
@@ -123,9 +126,12 @@ class TestRouteRequestEndpoint:
         mock_result.estimated_cost = 0.01
         mock_result.priority = 1
 
+        # Use AsyncMock for async function
+        async_mock = AsyncMock(return_value=mock_result)
+        
         with patch(
             "sekha_llm_bridge.routes_v2.registry.route_with_fallback",
-            return_value=mock_result,
+            async_mock,
         ):
             request_data = {
                 "task": "chat_smart",
@@ -146,9 +152,12 @@ class TestRouteRequestEndpoint:
         mock_result.estimated_cost = 0.0
         mock_result.priority = 2
 
+        # Use AsyncMock for async function
+        async_mock = AsyncMock(return_value=mock_result)
+        
         with patch(
             "sekha_llm_bridge.routes_v2.registry.route_with_fallback",
-            return_value=mock_result,
+            async_mock,
         ):
             request_data = {
                 "task": "chat_smart",

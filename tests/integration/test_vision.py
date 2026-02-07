@@ -10,14 +10,14 @@ Tests validate:
 """
 
 import base64
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from sekha_llm_bridge.config import ModelTask
 from sekha_llm_bridge.providers.base import ChatMessage, MessageRole
 from sekha_llm_bridge.providers.litellm_provider import LiteLlmProvider
-from sekha_llm_bridge.registry import registry
+from sekha_llm_bridge.registry import registry, CachedModelInfo
 
 
 class TestVisionRouting:
@@ -60,23 +60,25 @@ class TestVisionRouting:
     @pytest.mark.asyncio
     async def test_filter_non_vision_models(self):
         """Test that non-vision models are filtered when vision required."""
-        with patch.object(registry, "model_cache") as mock_cache:
-            # Mock models: some with vision, some without
-            mock_cache.values.return_value = [
-                MagicMock(
-                    model_id="gpt-4o",
-                    provider_id="openai",
-                    task=ModelTask.CHAT_SMART,
-                    supports_vision=True,
-                ),
-                MagicMock(
-                    model_id="llama3.1:8b",
-                    provider_id="ollama",
-                    task=ModelTask.CHAT_SMART,
-                    supports_vision=False,  # No vision
-                ),
-            ]
+        # Mock model_cache as dict with items()
+        mock_cache = {
+            "openai:gpt-4o": CachedModelInfo(
+                model_id="gpt-4o",
+                provider_id="openai",
+                task=ModelTask.CHAT_SMART,
+                context_window=128000,
+                supports_vision=True,
+            ),
+            "ollama:llama3.1:8b": CachedModelInfo(
+                model_id="llama3.1:8b",
+                provider_id="ollama",
+                task=ModelTask.CHAT_SMART,
+                context_window=8000,
+                supports_vision=False,
+            ),
+        }
 
+        with patch.object(registry, "model_cache", mock_cache):
             # Get candidates with vision requirement - test filtering directly
             candidates = registry._get_candidates(
                 task=ModelTask.CHAT_SMART,
@@ -95,7 +97,7 @@ class TestVisionRouting:
             # No vision models available
             mock_candidates.return_value = []
 
-            with pytest.raises(RuntimeError, match="No suitable providers available"):
+            with pytest.raises(RuntimeError, match="No providers available for task"):
                 await registry.route_with_fallback(
                     task=ModelTask.CHAT_SMART,
                     require_vision=True,
