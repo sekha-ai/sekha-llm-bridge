@@ -185,6 +185,7 @@ class TestVisionRouting:
                 ),
             ]
 
+            # Call directly to test filtering logic
             candidates = registry._get_candidates(
                 task=ModelTask.CHAT_SMART,
                 require_vision=True,
@@ -201,7 +202,7 @@ class TestVisionRouting:
             # No candidates (all filtered out)
             mock_candidates.return_value = []
 
-            with pytest.raises(RuntimeError, match="No providers available"):
+            with pytest.raises(RuntimeError, match="No suitable providers available"):
                 await registry.route_with_fallback(
                     task=ModelTask.CHAT_SMART,
                     require_vision=True,
@@ -349,7 +350,7 @@ class TestCircuitBreakerIntegration:
                     # All circuit breakers open
                     mock_cbs.get.return_value = MagicMock(is_open=lambda: True)
 
-                    with pytest.raises(RuntimeError, match="No providers available"):
+                    with pytest.raises(RuntimeError, match="No suitable providers available"):
                         await registry.route_with_fallback(
                             task=ModelTask.CHAT_SMALL
                         )
@@ -477,7 +478,7 @@ class TestMultiProviderFallback:
             # No candidates returned
             mock_candidates.return_value = []
 
-            with pytest.raises(RuntimeError, match="No providers available"):
+            with pytest.raises(RuntimeError, match="No suitable providers available"):
                 await registry.route_with_fallback(task=ModelTask.CHAT_SMALL)
 
 

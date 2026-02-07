@@ -378,13 +378,18 @@ class LiteLlmProvider(LlmProvider):
                 ]
 
                 for image in msg.images:
-                    if image.startswith("http"):
+                    if image.startswith(("http://", "https://")):
                         # Image URL
                         content_parts.append(
                             {"type": "image_url", "image_url": {"url": image}}
                         )
+                    elif image.startswith("data:"):
+                        # Already formatted data URL (e.g., data:image/png;base64,...)
+                        content_parts.append(
+                            {"type": "image_url", "image_url": {"url": image}}
+                        )
                     else:
-                        # Base64 image
+                        # Raw base64 - wrap it
                         content_parts.append(
                             {
                                 "type": "image_url",
