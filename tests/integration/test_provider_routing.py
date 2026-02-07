@@ -13,7 +13,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from sekha_llm_bridge.config import ModelTask
+from sekha_llm_bridge.config import ModelTask, ProviderConfig, ProviderType, ModelConfig
 from sekha_llm_bridge.registry import registry, CachedModelInfo
 
 
@@ -187,15 +187,33 @@ class TestVisionRouting:
             ),
         }
 
-        with patch.object(registry, "model_cache", mock_cache):
-            candidates = registry._get_candidates(
-                task=ModelTask.CHAT_SMART,
-                require_vision=True,
-            )
+        # Mock settings with provider configs
+        mock_settings = MagicMock()
+        mock_settings.providers = [
+            ProviderConfig(
+                id="openai",
+                provider_type=ProviderType.OPENAI,
+                priority=1,
+                models=[],
+            ),
+            ProviderConfig(
+                id="ollama",
+                provider_type=ProviderType.OLLAMA,
+                priority=2,
+                models=[],
+            ),
+        ]
 
-            model_ids = [c[1] for c in candidates]
-            assert "gpt-4o" in model_ids
-            assert "llama3.1:8b" not in model_ids
+        with patch.object(registry, "model_cache", mock_cache):
+            with patch("sekha_llm_bridge.registry.get_settings", return_value=mock_settings):
+                candidates = registry._get_candidates(
+                    task=ModelTask.CHAT_SMART,
+                    require_vision=True,
+                )
+
+                model_ids = [c[1] for c in candidates]
+                assert "gpt-4o" in model_ids
+                assert "llama3.1:8b" not in model_ids
 
     @pytest.mark.asyncio
     async def test_reject_non_vision_model_for_vision_task(self):
