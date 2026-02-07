@@ -163,7 +163,7 @@ class TestVisionRouting:
     async def test_require_vision_filters_models(self):
         """Test that require_vision filters to vision-capable models."""
         # Mock settings with vision and non-vision models
-        with patch("sekha_llm_bridge.registry.settings") as mock_settings:
+        with patch("sekha_llm_bridge.registry.global_settings") as mock_settings:
             mock_settings.providers = [
                 Mock(
                     id="provider1",
@@ -216,7 +216,7 @@ class TestVisionRouting:
     @pytest.mark.asyncio
     async def test_no_vision_models_raises_error(self):
         """Test error when no vision models available."""
-        with patch("sekha_llm_bridge.registry.settings") as mock_settings:
+        with patch("sekha_llm_bridge.registry.global_settings") as mock_settings:
             mock_settings.providers = [
                 Mock(
                     id="provider1",
@@ -258,7 +258,7 @@ class TestVisionRouting:
     @pytest.mark.asyncio
     async def test_vision_routing_respects_cost_limit(self):
         """Test that vision routing respects cost limits."""
-        with patch("sekha_llm_bridge.registry.settings") as mock_settings:
+        with patch("sekha_llm_bridge.registry.global_settings") as mock_settings:
             with patch("sekha_llm_bridge.registry.estimate_cost") as mock_cost:
                 # Expensive model
                 mock_cost.side_effect = lambda model, *args, **kwargs: (
