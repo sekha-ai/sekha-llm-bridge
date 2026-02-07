@@ -16,13 +16,19 @@ mock_settings.importance_model = "gpt-4o-mini"
 mock_settings.server_host = "0.0.0.0"
 mock_settings.server_port = 5001
 mock_settings.log_level = "info"
+mock_settings.default_models = Mock(
+    embedding="nomic-embed-text",
+    chat_smart="llama3.1:8b",
+    chat_small="llama3.1:8b",
+)
 
 
 @pytest.fixture(autouse=True)
 def mock_settings_fixture():
     """Automatically mock settings for all tests."""
-    with patch("sekha_llm_bridge.config.settings", mock_settings):
-        with patch("sekha_llm_bridge.utils.llm_client.settings", mock_settings):
+    # Patch get_settings() function instead of non-existent settings attribute
+    with patch("sekha_llm_bridge.config.get_settings", return_value=mock_settings):
+        with patch("sekha_llm_bridge.config.settings", mock_settings):
             with patch("sekha_llm_bridge.registry.settings", mock_settings):
                 with patch("sekha_llm_bridge.tasks.settings", mock_settings):
                     yield mock_settings
