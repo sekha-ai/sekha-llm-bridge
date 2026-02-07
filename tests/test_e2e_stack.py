@@ -166,7 +166,7 @@ class TestProviderFallback:
             # All providers unhealthy
             mock_providers.values.return_value = []
 
-            with pytest.raises(RuntimeError, match="No suitable provider"):
+            with pytest.raises(RuntimeError, match="No providers available"):
                 await registry.route_with_fallback(task=ModelTask.CHAT_SMALL)
 
 
