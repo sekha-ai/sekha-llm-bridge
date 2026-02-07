@@ -14,6 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from prometheus_client import make_asgi_app
 
 # Internal imports - all from the package
+from sekha_llm_bridge import config
 from sekha_llm_bridge.config import get_settings
 from sekha_llm_bridge.models import (
     ChatCompletionChoice,
@@ -41,6 +42,9 @@ from sekha_llm_bridge.services.entity_extraction_service import (
 from sekha_llm_bridge.services.importance_scorer import importance_scorer_service
 from sekha_llm_bridge.services.summarization_service import summarization_service
 from sekha_llm_bridge.utils.llm_client import llm_client
+
+# Expose global_settings for tests to patch
+global_settings = config.settings
 
 # Configure logging with fallback
 try:

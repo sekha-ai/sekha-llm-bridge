@@ -10,7 +10,11 @@ from typing import List, cast
 import litellm
 
 from .config import get_settings
+from . import config
 from .workers.celery_app import celery_app
+
+# Expose global_settings for tests to patch
+global_settings = config.settings
 
 
 @celery_app.task(name="tasks.embed_text")
