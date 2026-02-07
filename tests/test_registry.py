@@ -64,7 +64,7 @@ class TestRoutingResult:
 @pytest.fixture
 def mock_settings():
     """Create mock settings for testing."""
-    with patch("sekha_llm_bridge.registry.settings") as mock:
+    with patch("sekha_llm_bridge.registry.global_settings") as mock:
         # Mock provider config
         provider_config = Mock()
         provider_config.id = "test-provider"
@@ -94,7 +94,9 @@ def mock_settings():
         mock.routing.circuit_breaker.timeout_secs = 60
         mock.routing.circuit_breaker.success_threshold = 2
 
-        yield mock
+        # Also need to patch get_settings to return the mock
+        with patch("sekha_llm_bridge.registry.get_settings", return_value=mock):
+            yield mock
 
 
 class TestModelRegistryInitialization:
@@ -105,6 +107,7 @@ class TestModelRegistryInitialization:
         with patch("sekha_llm_bridge.registry.LiteLlmProvider") as mock_provider_class:
             mock_provider_class.return_value = Mock(provider_id="test-provider")
             registry = ModelRegistry()
+            registry._ensure_initialized()
 
             assert len(registry.providers) == 1
             assert "test-provider" in registry.providers
@@ -117,6 +120,7 @@ class TestModelRegistryInitialization:
             "sekha_llm_bridge.registry.LiteLlmProvider", side_effect=Exception("Failed")
         ):
             registry = ModelRegistry()
+            registry._ensure_initialized()
             # Should initialize but with no providers
             assert len(registry.providers) == 0
 
@@ -125,16 +129,17 @@ class TestModelRegistryInitialization:
         with patch("sekha_llm_bridge.registry.LiteLlmProvider") as mock_provider_class:
             mock_provider_class.return_value = Mock()
             registry = ModelRegistry()
+            registry._ensure_initialized()
 
             provider_config = mock_settings.providers[0]
             provider = registry._create_provider(provider_config)
 
             assert provider is not None
-            mock_provider_class.assert_called_once()
+            mock_provider_class.assert_called()
 
     def test_cache_ttl_initialization(self):
         """Test cache TTL is properly initialized."""
-        with patch("sekha_llm_bridge.registry.settings") as mock:
+        with patch("sekha_llm_bridge.registry.global_settings") as mock:
             mock.providers = []
             registry = ModelRegistry()
 
@@ -154,6 +159,7 @@ class TestRoutingWithFallback:
             mock_provider_class.return_value = mock_provider
 
             registry = ModelRegistry()
+            registry._ensure_initialized()
 
             result = await registry.route_with_fallback(
                 task=ModelTask.CHAT_SMALL, preferred_model="llama3.1:8b"
@@ -166,12 +172,14 @@ class TestRoutingWithFallback:
     @pytest.mark.asyncio
     async def test_route_no_suitable_provider(self):
         """Test routing when no suitable provider is available."""
-        with patch("sekha_llm_bridge.registry.settings") as mock:
+        with patch("sekha_llm_bridge.registry.global_settings") as mock:
             mock.providers = []
-            registry = ModelRegistry()
+            with patch("sekha_llm_bridge.registry.get_settings", return_value=mock):
+                registry = ModelRegistry()
+                registry._ensure_initialized()
 
-            with pytest.raises(RuntimeError, match="No providers available"):
-                await registry.route_with_fallback(task=ModelTask.EMBEDDING)
+                with pytest.raises(RuntimeError, match="No providers available"):
+                    await registry.route_with_fallback(task=ModelTask.EMBEDDING)
 
     @pytest.mark.asyncio
     async def test_route_with_circuit_breaker_open(self, mock_settings):
@@ -182,6 +190,7 @@ class TestRoutingWithFallback:
             mock_provider_class.return_value = mock_provider
 
             registry = ModelRegistry()
+            registry._ensure_initialized()
 
             # Open the circuit breaker
             cb = registry.circuit_breakers["test-provider"]
@@ -199,6 +208,7 @@ class TestRoutingWithFallback:
             mock_provider_class.return_value = mock_provider
 
             registry = ModelRegistry()
+            registry._ensure_initialized()
 
             # Set max_cost very low to exclude all models
             with pytest.raises(RuntimeError, match="No suitable providers"):
@@ -215,6 +225,7 @@ class TestRoutingWithFallback:
             mock_provider_class.return_value = mock_provider
 
             registry = ModelRegistry()
+            registry._ensure_initialized()
 
             # Model doesn't support vision, should fail
             with pytest.raises(RuntimeError, match="No providers available"):
@@ -256,7 +267,7 @@ class TestRoutingWithFallback:
             )
         ]
 
-        with patch("sekha_llm_bridge.registry.settings") as mock:
+        with patch("sekha_llm_bridge.registry.global_settings") as mock:
             provider1.base_url = "http://test1"
             provider1.api_key = None
             provider1.timeout_secs = 30
@@ -270,16 +281,18 @@ class TestRoutingWithFallback:
                 failure_threshold=5, timeout_secs=60, success_threshold=2
             )
 
-            with patch(
-                "sekha_llm_bridge.registry.LiteLlmProvider"
-            ) as mock_provider_class:
-                mock_provider_class.side_effect = lambda id, _: Mock(provider_id=id)
+            with patch("sekha_llm_bridge.registry.get_settings", return_value=mock):
+                with patch(
+                    "sekha_llm_bridge.registry.LiteLlmProvider"
+                ) as mock_provider_class:
+                    mock_provider_class.side_effect = lambda id, _: Mock(provider_id=id)
 
-                registry = ModelRegistry()
-                result = await registry.route_with_fallback(task=ModelTask.CHAT_SMALL)
+                    registry = ModelRegistry()
+                    registry._ensure_initialized()
+                    result = await registry.route_with_fallback(task=ModelTask.CHAT_SMALL)
 
-                # Should select model2 from provider2 (priority 1)
-                assert result.model_id == "model2"
+                    # Should select model2 from provider2 (priority 1)
+                    assert result.model_id == "model2"
 
 
 class TestGetCandidates:
@@ -289,6 +302,7 @@ class TestGetCandidates:
         """Test getting candidates for a specific task."""
         with patch("sekha_llm_bridge.registry.LiteLlmProvider"):
             registry = ModelRegistry()
+            registry._ensure_initialized()
 
             candidates = registry._get_candidates(task=ModelTask.CHAT_SMALL)
 
@@ -299,6 +313,7 @@ class TestGetCandidates:
         """Test candidates prioritize preferred model."""
         with patch("sekha_llm_bridge.registry.LiteLlmProvider"):
             registry = ModelRegistry()
+            registry._ensure_initialized()
 
             candidates = registry._get_candidates(
                 task=ModelTask.CHAT_SMALL, preferred_model="llama3.1:8b"
@@ -312,6 +327,7 @@ class TestGetCandidates:
         """Test candidates filtered by vision support."""
         with patch("sekha_llm_bridge.registry.LiteLlmProvider"):
             registry = ModelRegistry()
+            registry._ensure_initialized()
 
             candidates = registry._get_candidates(
                 task=ModelTask.CHAT_SMALL, require_vision=True
@@ -324,6 +340,7 @@ class TestGetCandidates:
         """Test candidates are sorted by priority."""
         with patch("sekha_llm_bridge.registry.LiteLlmProvider"):
             registry = ModelRegistry()
+            registry._ensure_initialized()
 
             candidates = registry._get_candidates(task=ModelTask.CHAT_SMALL)
 
@@ -340,6 +357,7 @@ class TestExecuteWithCircuitBreaker:
         """Test successful operation execution."""
         with patch("sekha_llm_bridge.registry.LiteLlmProvider"):
             registry = ModelRegistry()
+            registry._ensure_initialized()
 
             async def mock_operation():
                 return "success"
@@ -355,6 +373,7 @@ class TestExecuteWithCircuitBreaker:
         """Test failed operation records failure."""
         with patch("sekha_llm_bridge.registry.LiteLlmProvider"):
             registry = ModelRegistry()
+            registry._ensure_initialized()
 
             async def mock_operation():
                 raise Exception("Operation failed")
@@ -373,6 +392,7 @@ class TestExecuteWithCircuitBreaker:
         """Test operation with arguments."""
         with patch("sekha_llm_bridge.registry.LiteLlmProvider"):
             registry = ModelRegistry()
+            registry._ensure_initialized()
 
             async def mock_operation(a, b, c=None):
                 return f"{a}-{b}-{c}"
@@ -396,6 +416,7 @@ class TestProviderHealth:
             mock_provider_class.return_value = mock_provider
 
             registry = ModelRegistry()
+            registry._ensure_initialized()
             health = registry.get_provider_health()
 
             assert "test-provider" in health
@@ -412,6 +433,7 @@ class TestProviderHealth:
             mock_provider_class.return_value = mock_provider
 
             registry = ModelRegistry()
+            registry._ensure_initialized()
             health = registry.get_provider_health()
 
             cb_stats = health["test-provider"]["circuit_breaker"]
@@ -434,7 +456,7 @@ class TestProviderHealth:
             models=[],
         )
 
-        with patch("sekha_llm_bridge.registry.settings") as mock:
+        with patch("sekha_llm_bridge.registry.global_settings") as mock:
             mock.providers = [provider1, provider2]
             mock.routing = Mock(
                 circuit_breaker=Mock(
@@ -442,13 +464,15 @@ class TestProviderHealth:
                 )
             )
 
-            with patch("sekha_llm_bridge.registry.LiteLlmProvider"):
-                registry = ModelRegistry()
-                health = registry.get_provider_health()
+            with patch("sekha_llm_bridge.registry.get_settings", return_value=mock):
+                with patch("sekha_llm_bridge.registry.LiteLlmProvider"):
+                    registry = ModelRegistry()
+                    registry._ensure_initialized()
+                    health = registry.get_provider_health()
 
-                assert len(health) == 2
-                assert "provider1" in health
-                assert "provider2" in health
+                    assert len(health) == 2
+                    assert "provider1" in health
+                    assert "provider2" in health
 
 
 class TestListAllModels:
@@ -458,6 +482,7 @@ class TestListAllModels:
         """Test listing all available models."""
         with patch("sekha_llm_bridge.registry.LiteLlmProvider"):
             registry = ModelRegistry()
+            registry._ensure_initialized()
             models = registry.list_all_models()
 
             assert len(models) > 0
@@ -467,6 +492,7 @@ class TestListAllModels:
         """Test listed models include all required fields."""
         with patch("sekha_llm_bridge.registry.LiteLlmProvider"):
             registry = ModelRegistry()
+            registry._ensure_initialized()
             models = registry.list_all_models()
 
             required_fields = [
@@ -485,9 +511,11 @@ class TestListAllModels:
 
     def test_list_models_empty_registry(self):
         """Test listing models from empty registry."""
-        with patch("sekha_llm_bridge.registry.settings") as mock:
+        with patch("sekha_llm_bridge.registry.global_settings") as mock:
             mock.providers = []
-            registry = ModelRegistry()
-            models = registry.list_all_models()
+            with patch("sekha_llm_bridge.registry.get_settings", return_value=mock):
+                registry = ModelRegistry()
+                registry._ensure_initialized()
+                models = registry.list_all_models()
 
-            assert models == []
+                assert models == []
