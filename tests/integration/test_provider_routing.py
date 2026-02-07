@@ -193,12 +193,14 @@ class TestVisionRouting:
             ProviderConfig(
                 id="openai",
                 provider_type=ProviderType.OPENAI,
+                base_url="https://api.openai.com/v1",
                 priority=1,
                 models=[],
             ),
             ProviderConfig(
                 id="ollama",
                 provider_type=ProviderType.OLLAMA,
+                base_url="http://localhost:11434",
                 priority=2,
                 models=[],
             ),
