@@ -3,7 +3,7 @@
 import asyncio
 import logging
 from datetime import datetime
-from typing import Any, AsyncIterator, Dict, List, Optional, Union
+from typing import Any, AsyncIterator, Dict, List, Optional, Union, cast
 
 import litellm
 
@@ -82,7 +82,7 @@ class LiteLlmProvider(LlmProvider):
         """
         # If already prefixed, return as-is
         if "/" in model:
-            return str(model)
+            return cast(str, model)
 
         # For Ollama, prefix with 'ollama/'
         if self._provider_type == "ollama":
@@ -93,7 +93,7 @@ class LiteLlmProvider(LlmProvider):
             return f"openrouter/{model}"
 
         # For OpenAI and Anthropic, LiteLLM handles it
-        return str(model)
+        return cast(str, model)
 
     async def chat_completion(
         self,
