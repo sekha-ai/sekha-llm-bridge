@@ -14,7 +14,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from sekha_llm_bridge.config import ModelTask
+from sekha_llm_bridge.config import ModelTask, ProviderConfig, ProviderType
 from sekha_llm_bridge.providers.base import ChatMessage, MessageRole
 from sekha_llm_bridge.providers.litellm_provider import LiteLlmProvider
 from sekha_llm_bridge.registry import registry, CachedModelInfo
@@ -78,17 +78,35 @@ class TestVisionRouting:
             ),
         }
 
-        with patch.object(registry, "model_cache", mock_cache):
-            # Get candidates with vision requirement - test filtering directly
-            candidates = registry._get_candidates(
-                task=ModelTask.CHAT_SMART,
-                require_vision=True,
-            )
+        # Mock settings with provider configs
+        mock_settings = MagicMock()
+        mock_settings.providers = [
+            ProviderConfig(
+                id="openai",
+                provider_type=ProviderType.OPENAI,
+                priority=1,
+                models=[],
+            ),
+            ProviderConfig(
+                id="ollama",
+                provider_type=ProviderType.OLLAMA,
+                priority=2,
+                models=[],
+            ),
+        ]
 
-            # Only vision-capable model should be in candidates
-            model_ids = [c[1] for c in candidates]
-            assert "gpt-4o" in model_ids
-            assert "llama3.1:8b" not in model_ids
+        with patch.object(registry, "model_cache", mock_cache):
+            with patch("sekha_llm_bridge.registry.get_settings", return_value=mock_settings):
+                # Get candidates with vision requirement - test filtering directly
+                candidates = registry._get_candidates(
+                    task=ModelTask.CHAT_SMART,
+                    require_vision=True,
+                )
+
+                # Only vision-capable model should be in candidates
+                model_ids = [c[1] for c in candidates]
+                assert "gpt-4o" in model_ids
+                assert "llama3.1:8b" not in model_ids
 
     @pytest.mark.asyncio
     async def test_no_vision_models_available(self):

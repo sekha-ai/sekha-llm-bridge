@@ -55,12 +55,13 @@ class TestModelsEndpoint:
             "sekha_llm_bridge.routes_v2.registry.list_all_models",
             return_value=mock_models,
         ):
-            response = client.get("/api/v1/models")
-            assert response.status_code == 200
-            models = response.json()
-            assert len(models) >= 2
-            model_ids = [m["model_id"] for m in models]
-            assert "llama3.1:8b" in model_ids
+            with patch.object("sekha_llm_bridge.routes_v2.registry", "_initialized", True):
+                response = client.get("/api/v1/models")
+                assert response.status_code == 200
+                models = response.json()
+                assert len(models) >= 2
+                model_ids = [m["model_id"] for m in models]
+                assert "llama3.1:8b" in model_ids
 
 
 class TestTasksEndpoint:
@@ -88,24 +89,23 @@ class TestRouteRequestEndpoint:
         mock_result.estimated_cost = 0.0
         mock_result.priority = 1
 
-        # Use AsyncMock for async function
-        async_mock = AsyncMock(return_value=mock_result)
-        
-        with patch(
-            "sekha_llm_bridge.routes_v2.registry.route_with_fallback",
-            async_mock,
-        ):
-            request_data = {
-                "task": "chat_small",
-                "require_vision": False,
-                "preferred_model": None,
-            }
+        with patch("sekha_llm_bridge.routes_v2.registry._initialized", True):
+            with patch(
+                "sekha_llm_bridge.routes_v2.registry.route_with_fallback",
+                new_callable=AsyncMock,
+                return_value=mock_result,
+            ):
+                request_data = {
+                    "task": "chat_small",
+                    "require_vision": False,
+                    "preferred_model": None,
+                }
 
-            response = client.post("/api/v1/route", json=request_data)
-            assert response.status_code == 200
-            data = response.json()
-            assert data["provider_id"] == "ollama"
-            assert data["model_id"] == "llama3.1:8b"
+                response = client.post("/api/v1/route", json=request_data)
+                assert response.status_code == 200
+                data = response.json()
+                assert data["provider_id"] == "ollama"
+                assert data["model_id"] == "llama3.1:8b"
 
     def test_route_request_invalid_task(self):
         """Test route request with invalid task."""
@@ -126,23 +126,22 @@ class TestRouteRequestEndpoint:
         mock_result.estimated_cost = 0.01
         mock_result.priority = 1
 
-        # Use AsyncMock for async function
-        async_mock = AsyncMock(return_value=mock_result)
-        
-        with patch(
-            "sekha_llm_bridge.routes_v2.registry.route_with_fallback",
-            async_mock,
-        ):
-            request_data = {
-                "task": "chat_smart",
-                "require_vision": True,
-            }
+        with patch("sekha_llm_bridge.routes_v2.registry._initialized", True):
+            with patch(
+                "sekha_llm_bridge.routes_v2.registry.route_with_fallback",
+                new_callable=AsyncMock,
+                return_value=mock_result,
+            ):
+                request_data = {
+                    "task": "chat_smart",
+                    "require_vision": True,
+                }
 
-            response = client.post("/api/v1/route", json=request_data)
-            assert response.status_code == 200
-            data = response.json()
-            assert data["provider_id"] == "openai"
-            assert data["model_id"] == "gpt-4o"
+                response = client.post("/api/v1/route", json=request_data)
+                assert response.status_code == 200
+                data = response.json()
+                assert data["provider_id"] == "openai"
+                assert data["model_id"] == "gpt-4o"
 
     def test_route_request_with_cost_limit(self):
         """Test route request with cost limit."""
@@ -152,19 +151,18 @@ class TestRouteRequestEndpoint:
         mock_result.estimated_cost = 0.0
         mock_result.priority = 2
 
-        # Use AsyncMock for async function
-        async_mock = AsyncMock(return_value=mock_result)
-        
-        with patch(
-            "sekha_llm_bridge.routes_v2.registry.route_with_fallback",
-            async_mock,
-        ):
-            request_data = {
-                "task": "chat_smart",
-                "max_cost": 0.001,  # Very tight budget
-            }
+        with patch("sekha_llm_bridge.routes_v2.registry._initialized", True):
+            with patch(
+                "sekha_llm_bridge.routes_v2.registry.route_with_fallback",
+                new_callable=AsyncMock,
+                return_value=mock_result,
+            ):
+                request_data = {
+                    "task": "chat_smart",
+                    "max_cost": 0.001,  # Very tight budget
+                }
 
-            response = client.post("/api/v1/route", json=request_data)
-            assert response.status_code == 200
-            data = response.json()
-            assert data["estimated_cost"] <= 0.001
+                response = client.post("/api/v1/route", json=request_data)
+                assert response.status_code == 200
+                data = response.json()
+                assert data["estimated_cost"] <= 0.001
