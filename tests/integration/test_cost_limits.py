@@ -47,7 +47,7 @@ class TestCostLimitEnforcement:
                     "sekha_llm_bridge.registry.estimate_cost", return_value=0.05
                 ):
                     # Request with tight budget
-                    with pytest.raises(RuntimeError, match="No suitable provider"):
+                    with pytest.raises(RuntimeError, match="No providers available"):
                         await registry.route_with_fallback(
                             task=ModelTask.CHAT_SMART,
                             max_cost=0.01,  # Budget too low for GPT-4o
@@ -79,8 +79,8 @@ class TestCostLimitEnforcement:
                 with patch.object(registry, "circuit_breakers") as mock_cbs:
                     mock_cbs.get.return_value = MagicMock(is_open=lambda: False)
 
-                    # Mock cost estimates
-                    def mock_estimate(model_id, *args):
+                    # Mock cost estimates - FIXED: Accept keyword arguments
+                    def mock_estimate(model_id, input_tokens=0, output_tokens=0, **kwargs):
                         if "gpt-4o" in model_id:
                             return 0.05  # Expensive
                         return 0.0  # Free
@@ -126,7 +126,7 @@ class TestCostLimitEnforcement:
                     with patch(
                         "sekha_llm_bridge.registry.estimate_cost", return_value=0.05
                     ):
-                        with pytest.raises(RuntimeError, match="No suitable provider"):
+                        with pytest.raises(RuntimeError, match="No providers available"):
                             await registry.route_with_fallback(
                                 task=ModelTask.CHAT_SMART,
                                 max_cost=0.001,  # Very tight budget
