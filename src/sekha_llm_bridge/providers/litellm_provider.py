@@ -39,7 +39,7 @@ class LiteLlmProvider(LlmProvider):
         """
         super().__init__(provider_id, config)
 
-        self._provider_type = config.get("provider_type", "ollama")
+        self._provider_type: str = cast(str, config.get("provider_type", "ollama"))
         self.base_url = config.get("base_url")
         self.api_key = config.get("api_key")
         self.timeout = config.get("timeout", 120)
