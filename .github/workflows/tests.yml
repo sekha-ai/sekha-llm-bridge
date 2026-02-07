@@ -131,7 +131,7 @@ jobs:
       run: isort --profile black src/ tests/
     
     - name: Run mypy type checking
-      run: mypy src/ --ignore-missing-imports
+      run: mypy src/sekha_llm_bridge --ignore-missing-imports
 
   test-summary:
     name: Test Summary
