@@ -14,7 +14,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from sekha_llm_bridge.config import ModelTask
-from sekha_llm_bridge.registry import registry
+from sekha_llm_bridge.registry import registry, CachedModelInfo
 
 
 class TestTaskBasedRouting:
@@ -169,23 +169,25 @@ class TestVisionRouting:
     @pytest.mark.asyncio
     async def test_require_vision_filters_candidates(self):
         """Test that require_vision filters non-vision models."""
-        with patch.object(registry, "model_cache") as mock_cache:
-            mock_cache.values.return_value = [
-                MagicMock(
-                    model_id="gpt-4o",
-                    provider_id="openai",
-                    task=ModelTask.CHAT_SMART,
-                    supports_vision=True,
-                ),
-                MagicMock(
-                    model_id="llama3.1:8b",
-                    provider_id="ollama",
-                    task=ModelTask.CHAT_SMART,
-                    supports_vision=False,
-                ),
-            ]
+        # Mock model_cache as a dict with items()
+        mock_cache = {
+            "openai:gpt-4o": CachedModelInfo(
+                model_id="gpt-4o",
+                provider_id="openai",
+                task=ModelTask.CHAT_SMART,
+                context_window=128000,
+                supports_vision=True,
+            ),
+            "ollama:llama3.1:8b": CachedModelInfo(
+                model_id="llama3.1:8b",
+                provider_id="ollama",
+                task=ModelTask.CHAT_SMART,
+                context_window=8000,
+                supports_vision=False,
+            ),
+        }
 
-            # Call directly to test filtering logic
+        with patch.object(registry, "model_cache", mock_cache):
             candidates = registry._get_candidates(
                 task=ModelTask.CHAT_SMART,
                 require_vision=True,
@@ -202,7 +204,7 @@ class TestVisionRouting:
             # No candidates (all filtered out)
             mock_candidates.return_value = []
 
-            with pytest.raises(RuntimeError, match="No suitable providers available"):
+            with pytest.raises(RuntimeError, match="No providers available for task"):
                 await registry.route_with_fallback(
                     task=ModelTask.CHAT_SMART,
                     require_vision=True,
@@ -478,7 +480,7 @@ class TestMultiProviderFallback:
             # No candidates returned
             mock_candidates.return_value = []
 
-            with pytest.raises(RuntimeError, match="No suitable providers available"):
+            with pytest.raises(RuntimeError, match="No providers available for task"):
                 await registry.route_with_fallback(task=ModelTask.CHAT_SMALL)
 
 
