@@ -79,7 +79,7 @@ class TestCostLimitEnforcement:
                 with patch.object(registry, "circuit_breakers") as mock_cbs:
                     mock_cbs.get.return_value = MagicMock(is_open=lambda: False)
 
-                    # Mock cost estimates - FIXED: Accept keyword arguments
+                    # Mock cost estimates - Accept keyword arguments
                     def mock_estimate(model_id, input_tokens=0, output_tokens=0, **kwargs):
                         if "gpt-4o" in model_id:
                             return 0.05  # Expensive
@@ -122,7 +122,7 @@ class TestCostLimitEnforcement:
                 with patch.object(registry, "circuit_breakers") as mock_cbs:
                     mock_cbs.get.return_value = MagicMock(is_open=lambda: False)
 
-                    # All models expensive - FIXED: Accept keyword arguments
+                    # All models expensive - Accept keyword arguments
                     def mock_estimate(model_id, input_tokens=0, output_tokens=0, **kwargs):
                         return 0.05
 
@@ -130,7 +130,7 @@ class TestCostLimitEnforcement:
                         "sekha_llm_bridge.registry.estimate_cost",
                         side_effect=mock_estimate,
                     ):
-                        # FIXED: Match actual error message format
+                        # Match actual error message format
                         with pytest.raises(
                             RuntimeError,
                             match="No providers available for task 'chat_smart'",
@@ -170,7 +170,7 @@ class TestMultiRequestBudget:
         # Daily budget: $1.00
         tracker = BudgetTracker(max_budget=1.0)
 
-        # FIXED: Use actual cost estimates from pricing data
+        # Use actual cost estimates from pricing data
         # Request 1: Smaller tokens to fit budget
         cost1 = estimate_cost("gpt-4o", 5000, 2000)  # Roughly $0.04
         assert tracker.can_afford(cost1)
@@ -186,7 +186,7 @@ class TestMultiRequestBudget:
         assert tracker.can_afford(cost3)
         tracker.record_spend(cost3)
 
-        # Remaining budget check - FIXED: Adjust for actual costs
+        # Remaining budget check
         assert tracker.remaining() < 0.9  # Most of budget spent
 
         # Large request would exceed budget
@@ -256,13 +256,13 @@ class TestPerProviderCostLimits:
             },  # Free
         }
 
-        # FIXED: Use smaller token counts for OpenAI request
+        # Use smaller token counts for OpenAI request
         openai_cost = estimate_cost("gpt-4o", 5000, 2000)  # Roughly $0.04
         assert openai_cost <= provider_budgets["openai"]["per_request"]
 
         # Large request to Anthropic
         large_tokens = 50000
-        anthropic_cost = estimate_cost("claude-3.5-sonnet", large_tokens, large_tokens)
+        anthropic_cost = estimate_cost("claude-3-5-sonnet-20241022", large_tokens, large_tokens)
 
         if anthropic_cost > provider_budgets["anthropic"]["per_request"]:
             # Should reject or fallback
@@ -277,10 +277,10 @@ class TestPerProviderCostLimits:
         """Test disabling expensive providers when budget is low."""
         remaining_budget = 0.01  # $0.01 left
 
-        # Check which providers are affordable - FIXED: Use smaller token counts
+        # Check which providers are affordable
         providers_costs = {
             "openai": estimate_cost("gpt-4o", 1000, 500),  # Small request
-            "anthropic": estimate_cost("claude-3.5-sonnet", 1000, 500),
+            "anthropic": estimate_cost("claude-3-5-sonnet-20241022", 1000, 500),
             "ollama": estimate_cost("llama3.1:8b", 5000, 2000),
         }
 
@@ -292,7 +292,6 @@ class TestPerProviderCostLimits:
 
         # Only free provider should be affordable
         assert "ollama" in affordable_providers
-        # Others may or may not be affordable depending on exact pricing
 
 
 class TestCostReporting:
@@ -364,8 +363,6 @@ class TestCostReporting:
 
                             # Verify cost was logged
                             log_output = log_capture.getvalue()
-                            # Log output should contain routing information
-                            # (exact format depends on logger configuration)
                             assert isinstance(log_output, str)
         finally:
             logger.removeHandler(handler)
