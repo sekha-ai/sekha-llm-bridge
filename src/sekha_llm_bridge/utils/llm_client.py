@@ -1,12 +1,17 @@
-"""Unified LLM client using LiteLLM"""
+"""Unified LLM client using LiteLLM
+
+NOTE: This is legacy code that should be refactored to use the provider registry.
+For now, using hardcoded defaults where settings don't match v2.0 config.
+"""
 
 import logging
+import os
 from typing import Any, Dict, List, Optional
 
 import litellm
 from tenacity import retry, stop_after_attempt, wait_exponential
 
-from sekha_llm_bridge.config import settings
+from sekha_llm_bridge.config import get_settings
 
 logger = logging.getLogger(__name__)
 
@@ -19,8 +24,9 @@ class LLMClient:
     """Unified interface for LLM operations"""
 
     def __init__(self):
-        self.ollama_base_url = settings.ollama_base_url
-        self.timeout = settings.ollama_timeout
+        # TODO: Refactor to use provider registry
+        self.ollama_base_url = os.getenv("OLLAMA_HOST", "http://localhost:11434")
+        self.timeout = 120
 
     @retry(
         stop=stop_after_attempt(3),
@@ -31,7 +37,9 @@ class LLMClient:
         self, text: str, model: Optional[str] = None
     ) -> List[float]:
         """Generate embedding for text"""
-        model = model or settings.embedding_model
+        if model is None:
+            settings = get_settings()
+            model = settings.default_models.embedding or "nomic-embed-text"
 
         try:
             response = await litellm.aembedding(
@@ -60,7 +68,9 @@ class LLMClient:
         max_tokens: int = 2000,
     ) -> str:
         """Generate LLM completion"""
-        model = model or settings.summarization_model
+        if model is None:
+            settings = get_settings()
+            model = settings.default_models.chat_smart or "llama3.1:8b"
 
         try:
             response = await litellm.acompletion(
@@ -83,6 +93,10 @@ class LLMClient:
         import httpx
 
         try:
+            settings = get_settings()
+            embedding_model = settings.default_models.embedding or "nomic-embed-text"
+            chat_model = settings.default_models.chat_smart or "llama3.1:8b"
+            
             async with httpx.AsyncClient(timeout=5.0) as client:
                 # Check if Ollama is running
                 response = await client.get(f"{self.ollama_base_url}/api/tags")
@@ -95,10 +109,10 @@ class LLMClient:
                         "ollama_url": self.ollama_base_url,
                         "models_available": [m["name"] for m in models],
                         "embedding_model_ready": any(
-                            settings.embedding_model in m["name"] for m in models
+                            embedding_model in m["name"] for m in models
                         ),
                         "summarization_model_ready": any(
-                            settings.summarization_model in m["name"] for m in models
+                            chat_model in m["name"] for m in models
                         ),
                     }
 
