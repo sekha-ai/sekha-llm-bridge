@@ -206,4 +206,4 @@ def find_cheapest_model(
         return None
 
     # Return model with minimum cost
-    return min(costs, key=costs.get)
+    return min(costs, key=lambda m: costs[m])
