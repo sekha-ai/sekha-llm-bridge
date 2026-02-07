@@ -2,7 +2,7 @@
 
 from celery import Celery
 
-from sekha_llm_bridge.config import get_settings, settings as global_settings
+from sekha_llm_bridge.config import get_settings
 
 _celery_app = None
 
