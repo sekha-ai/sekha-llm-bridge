@@ -27,6 +27,7 @@ class ModelTask(str, Enum):
     CHAT_SMART = "chat_smart"
     VISION = "vision"
     AUDIO = "audio"
+    IMAGE_GENERATION = "image_generation"
 
 
 class VisionCapabilities(BaseModel):
