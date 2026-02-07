@@ -3,7 +3,7 @@
 import asyncio
 import logging
 from datetime import datetime
-from typing import Any, AsyncIterator, Dict, List, Optional, Union, cast
+from typing import Any, AsyncIterator, Dict, List, Optional, cast
 
 import litellm
 
@@ -64,12 +64,12 @@ class LiteLlmProvider(LlmProvider):
 
     def _get_api_key_env_name(self) -> Optional[str]:
         """Get the environment variable name for the API key."""
-        mapping = {
+        mapping: Dict[str, str] = {
             "openai": "OPENAI_API_KEY",
             "anthropic": "ANTHROPIC_API_KEY",
             "openrouter": "OPENROUTER_API_KEY",
         }
-        return mapping.get(self._provider_type)
+        return cast(Optional[str], mapping.get(self._provider_type))
 
     def get_model_string(self, model: str) -> str:
         """Convert model ID to LiteLLM format.
@@ -82,7 +82,7 @@ class LiteLlmProvider(LlmProvider):
         """
         # If already prefixed, return as-is
         if "/" in model:
-            return cast(str, model)
+            return model
 
         # For Ollama, prefix with 'ollama/'
         if self._provider_type == "ollama":
@@ -93,7 +93,7 @@ class LiteLlmProvider(LlmProvider):
             return f"openrouter/{model}"
 
         # For OpenAI and Anthropic, LiteLLM handles it
-        return cast(str, model)
+        return model
 
     async def chat_completion(
         self,
