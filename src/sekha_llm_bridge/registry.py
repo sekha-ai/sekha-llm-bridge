@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple
 
-from .config import ModelTask, get_settings
+from .config import ModelTask, ProviderConfig, get_settings
 from .pricing import estimate_cost
 from .providers.base import LlmProvider
 from .providers.litellm_provider import LiteLlmProvider
@@ -64,7 +64,7 @@ class ModelRegistry:
             f"Model registry initialized with {len(self.providers)} provider(s)"
         )
 
-    def _initialize_providers(self):
+    def _initialize_providers(self) -> None:
         """Initialize providers from configuration."""
         settings = get_settings()
         for provider_config in settings.providers:
@@ -104,7 +104,7 @@ class ModelRegistry:
                     f"Failed to initialize provider '{provider_config.id}': {e}"
                 )
 
-    def _create_provider(self, provider_config) -> LlmProvider:
+    def _create_provider(self, provider_config: ProviderConfig) -> LlmProvider:
         """Create a provider instance from configuration."""
         config_dict = {
             "provider_type": provider_config.provider_type.value,
