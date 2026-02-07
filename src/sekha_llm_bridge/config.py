@@ -5,7 +5,7 @@ from enum import Enum
 from typing import List, Optional
 
 import yaml
-from pydantic import BaseModel, Field, validator
+from typing import BaseModel, Field, validator
 
 
 class ProviderType(str, Enum):
