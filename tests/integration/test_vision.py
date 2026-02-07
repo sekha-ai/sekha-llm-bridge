@@ -15,7 +15,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from sekha_llm_bridge.config import ModelTask
-from sekha_llm_bridge.models import ChatMessage
+from sekha_llm_bridge.providers.base import ChatMessage, MessageRole
 from sekha_llm_bridge.providers.litellm_provider import LiteLlmProvider
 from sekha_llm_bridge.registry import registry
 
@@ -95,7 +95,7 @@ class TestVisionRouting:
             # No vision models available
             mock_candidates.return_value = []
 
-            with pytest.raises(RuntimeError, match="No suitable provider"):
+            with pytest.raises(RuntimeError, match="No providers available"):
                 await registry.route_with_fallback(
                     task=ModelTask.CHAT_SMART,
                     require_vision=True,
@@ -120,7 +120,7 @@ class TestImageFormatHandling:
         # Message with URL image
         messages = [
             ChatMessage(
-                role="user",
+                role=MessageRole.USER,
                 content="What's in this image?",
                 images=["https://example.com/image.jpg"],
             )
@@ -160,7 +160,7 @@ class TestImageFormatHandling:
 
         messages = [
             ChatMessage(
-                role="user",
+                role=MessageRole.USER,
                 content="Analyze this image",
                 images=[base64_image],
             )
@@ -188,7 +188,7 @@ class TestImageFormatHandling:
 
         messages = [
             ChatMessage(
-                role="user",
+                role=MessageRole.USER,
                 content="Compare these images",
                 images=[
                     "https://example.com/image1.jpg",
@@ -226,7 +226,7 @@ class TestImageFormatHandling:
 
         messages = [
             ChatMessage(
-                role="user",
+                role=MessageRole.USER,
                 content="Just text, no images",
                 images=None,
             )
@@ -253,7 +253,7 @@ class TestImageFormatHandling:
 
         messages = [
             ChatMessage(
-                role="user",
+                role=MessageRole.USER,
                 content="Text message",
                 images=[],  # Empty list
             )
@@ -331,7 +331,7 @@ class TestVisionProviderFallback:
                     # All circuit breakers open
                     mock_cbs.get.return_value = MagicMock(is_open=lambda: True)
 
-                    with pytest.raises(RuntimeError, match="No suitable provider"):
+                    with pytest.raises(RuntimeError, match="No providers available"):
                         await registry.route_with_fallback(
                             task=ModelTask.CHAT_SMART,
                             require_vision=True,
@@ -480,7 +480,7 @@ class TestProxyVisionDetection:
         # Messages with images
         vision_messages = [
             ChatMessage(
-                role="user",
+                role=MessageRole.USER,
                 content="What's this?",
                 images=["https://example.com/image.jpg"],
             )
@@ -492,7 +492,7 @@ class TestProxyVisionDetection:
         """Test that require_vision flag is set when images detected."""
         messages = [
             ChatMessage(
-                role="user",
+                role=MessageRole.USER,
                 content="Analyze this image",
                 images=["https://example.com/test.jpg"],
             )
