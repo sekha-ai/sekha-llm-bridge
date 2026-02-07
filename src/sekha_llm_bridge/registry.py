@@ -5,7 +5,8 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple
 
-from .config import ModelTask, ProviderConfig, get_settings, settings as global_settings
+from .config import ModelTask, ProviderConfig, get_settings
+from .config import settings as global_settings
 from .pricing import estimate_cost
 from .providers.base import LlmProvider
 from .providers.litellm_provider import LiteLlmProvider
@@ -63,12 +64,12 @@ class ModelRegistry:
         """Ensure providers are initialized (lazy initialization)."""
         if self._initialized:
             return
-            
+
         # Check if settings are available
         if global_settings is None:
             logger.warning("Settings not loaded yet, skipping provider initialization")
             return
-            
+
         self._initialize_providers()
         self._initialized = True
         logger.info(
@@ -159,7 +160,7 @@ class ModelRegistry:
             RuntimeError: If no suitable provider is available
         """
         self._ensure_initialized()
-        
+
         # Get candidate providers sorted by priority
         candidates = self._get_candidates(
             task=task,
