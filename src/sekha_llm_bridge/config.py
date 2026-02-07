@@ -108,7 +108,7 @@ class ProviderConfig(BaseModel):
 
 class DefaultModels(BaseModel):
     """Default model preferences."""
-
+    
     embedding: Optional[str] = Field(None, description="Default embedding model")
     chat_fast: Optional[str] = Field(None, description="Fast chat model (cheap)")
     chat_smart: Optional[str] = Field(None, description="Smart chat model (expensive)")
@@ -143,7 +143,7 @@ class RoutingConfig(BaseModel):
         None, description="Maximum cost per request in USD"
     )
     circuit_breaker: CircuitBreakerConfig = Field(
-        default_factory=CircuitBreakerConfig, description="Circuit breaker settings"
+        default_factory=lambda: CircuitBreakerConfig(), description="Circuit breaker settings"
     )
 
 
@@ -155,10 +155,10 @@ class Settings(BaseModel):
         ..., description="List of configured providers"
     )
     default_models: DefaultModels = Field(
-        default_factory=DefaultModels, description="Default model preferences"
+        default_factory=lambda: DefaultModels(), description="Default model preferences"
     )
     routing: RoutingConfig = Field(
-        default_factory=RoutingConfig, description="Routing configuration"
+        default_factory=lambda: RoutingConfig(), description="Routing configuration"
     )
 
     # Server settings
