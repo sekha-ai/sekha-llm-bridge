@@ -26,12 +26,10 @@ mock_settings.default_models = Mock(
 @pytest.fixture(autouse=True)
 def mock_settings_fixture():
     """Automatically mock settings for all tests."""
-    # Patch get_settings() function instead of non-existent settings attribute
+    # Patch get_settings() function and config.settings
     with patch("sekha_llm_bridge.config.get_settings", return_value=mock_settings):
         with patch("sekha_llm_bridge.config.settings", mock_settings):
-            with patch("sekha_llm_bridge.registry.global_settings", mock_settings):
-               # with patch("sekha_llm_bridge.tasks.settings", mock_settings):
-                    yield mock_settings
+            yield mock_settings
 
 
 @pytest.fixture
@@ -54,7 +52,7 @@ def mock_litellm_completion():
     """Mock litellm completion response."""
     mock_response = Mock()
     mock_response.choices = [Mock()]
-    mock_response.choices[0].message = {"content": "Test response"}
+    mock_response.choices[0].message = Mock(content="Test response")
     mock_response.choices[0].finish_reason = "stop"
     mock_response.model = "gpt-4o"
     mock_response.usage = {
@@ -184,7 +182,7 @@ def mock_external_apis():
                 # Set default return values
                 mock_response = Mock()
                 mock_response.choices = [Mock()]
-                mock_response.choices[0].message = {"content": "Mocked response"}
+                mock_response.choices[0].message = Mock(content="Mocked response")
                 mock_response.choices[0].finish_reason = "stop"
                 mock_response.model = "gpt-4o"
                 mock_response.usage = {
