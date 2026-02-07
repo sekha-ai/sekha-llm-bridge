@@ -6,8 +6,7 @@ from unittest.mock import Mock, patch
 import pytest
 
 from sekha_llm_bridge.config import ModelTask
-from sekha_llm_bridge.registry import (CachedModelInfo, ModelRegistry,
-                                       RoutingResult)
+from sekha_llm_bridge.registry import CachedModelInfo, ModelRegistry, RoutingResult
 
 
 class TestCachedModelInfo:

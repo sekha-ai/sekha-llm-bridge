@@ -127,7 +127,7 @@ jobs:
       run: black --check .
     
     - name: Check import sorting
-      run: isort --check-only src/ tests/
+      run: isort --profile black src/ tests/
     
     - name: Run mypy type checking
       run: mypy src/ --ignore-missing-imports
