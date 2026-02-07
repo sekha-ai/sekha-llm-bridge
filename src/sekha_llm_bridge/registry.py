@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple
 
-from .config import ModelTask, ProviderConfig, get_settings
+from .config import ModelTask, ProviderConfig, get_settings, settings as global_settings
 from .pricing import estimate_cost
 from .providers.base import LlmProvider
 from .providers.litellm_provider import LiteLlmProvider
@@ -57,9 +57,20 @@ class ModelRegistry:
         self.circuit_breakers: Dict[str, CircuitBreaker] = {}
         self._last_cache_refresh: Optional[datetime] = None
         self._cache_ttl = timedelta(minutes=5)
+        self._initialized = False
 
-        # Initialize providers from settings
+    def _ensure_initialized(self) -> None:
+        """Ensure providers are initialized (lazy initialization)."""
+        if self._initialized:
+            return
+            
+        # Check if settings are available
+        if global_settings is None:
+            logger.warning("Settings not loaded yet, skipping provider initialization")
+            return
+            
         self._initialize_providers()
+        self._initialized = True
         logger.info(
             f"Model registry initialized with {len(self.providers)} provider(s)"
         )
@@ -147,6 +158,8 @@ class ModelRegistry:
         Raises:
             RuntimeError: If no suitable provider is available
         """
+        self._ensure_initialized()
+        
         # Get candidate providers sorted by priority
         candidates = self._get_candidates(
             task=task,
@@ -300,6 +313,7 @@ class ModelRegistry:
         Raises:
             Exception: If operation fails
         """
+        self._ensure_initialized()
         cb = self.circuit_breakers.get(provider_id)
 
         try:
@@ -323,6 +337,7 @@ class ModelRegistry:
         Returns:
             Dictionary mapping provider_id to health info
         """
+        self._ensure_initialized()
         health = {}
 
         for provider_id, provider in self.providers.items():
@@ -349,6 +364,7 @@ class ModelRegistry:
         Returns:
             List of model dictionaries
         """
+        self._ensure_initialized()
         models = []
 
         for model_info in self.model_cache.values():
