@@ -41,12 +41,12 @@ class LLMClient:
             # Execute embedding request
             result = await self.registry.execute_with_circuit_breaker(
                 provider_id=routing_result.provider.provider_id,
-                operation=routing_result.provider.embed,
+                operation=routing_result.provider.generate_embedding,
                 text=text,
                 model=routing_result.model_id,
             )
 
-            return result["embedding"]
+            return result.embedding
 
         except Exception as e:
             logger.error(f"Embedding generation failed: {e}")
@@ -94,17 +94,27 @@ class LLMClient:
                 require_vision=require_vision,
             )
 
+            # Convert messages to ChatMessage format
+            from sekha_llm_bridge.providers.base import ChatMessage, MessageRole
+
+            chat_messages = [
+                ChatMessage(
+                    role=MessageRole(msg["role"]), content=msg["content"]
+                )
+                for msg in messages
+            ]
+
             # Execute completion request
             result = await self.registry.execute_with_circuit_breaker(
                 provider_id=routing_result.provider.provider_id,
-                operation=routing_result.provider.complete,
-                messages=messages,
+                operation=routing_result.provider.chat_completion,
+                messages=chat_messages,
                 model=routing_result.model_id,
                 temperature=temperature,
                 max_tokens=max_tokens,
             )
 
-            return result["content"]
+            return result.content
 
         except Exception as e:
             logger.error(f"LLM completion failed: {e}")
