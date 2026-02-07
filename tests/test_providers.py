@@ -46,15 +46,18 @@ class TestLiteLlmProviderInitialization:
         """Test creating a LiteLLM provider."""
         provider = LiteLlmProvider(
             provider_id="test-provider",
-            config={"api_key": "test-key", "base_url": "http://localhost"},
+            config={"provider_type": "ollama", "api_key": "test-key", "base_url": "http://localhost"},
         )
         assert provider.provider_id == "test-provider"
-        assert provider.provider_type == "litellm"
+        # Provider type comes from config, defaults to "ollama"
+        assert provider.provider_type == "ollama"
 
     def test_litellm_provider_with_minimal_config(self):
         """Test LiteLLM provider with minimal configuration."""
         provider = LiteLlmProvider(provider_id="minimal", config={})
         assert provider.provider_id == "minimal"
+        # Defaults to ollama when no provider_type specified
+        assert provider.provider_type == "ollama"
 
 
 class TestLiteLlmChatCompletion:
@@ -67,14 +70,17 @@ class TestLiteLlmChatCompletion:
 
         mock_response = Mock()
         mock_response.choices = [Mock()]
-        mock_response.choices[0].message = {"content": "Hello!"}
+        # Mock message as object with .content attribute
+        mock_message = Mock()
+        mock_message.content = "Hello!"
+        mock_response.choices[0].message = mock_message
         mock_response.choices[0].finish_reason = "stop"
         mock_response.model = "gpt-4o"
-        mock_response.usage = {
-            "prompt_tokens": 10,
-            "completion_tokens": 5,
-            "total_tokens": 15,
-        }
+        mock_usage = Mock()
+        mock_usage.prompt_tokens = 10
+        mock_usage.completion_tokens = 5
+        mock_usage.total_tokens = 15
+        mock_response.usage = mock_usage
 
         with patch("litellm.acompletion", return_value=mock_response):
             messages = [ChatMessage(role=MessageRole.USER, content="Hi")]
@@ -90,14 +96,16 @@ class TestLiteLlmChatCompletion:
 
         mock_response = Mock()
         mock_response.choices = [Mock()]
-        mock_response.choices[0].message = {"content": "Response"}
+        mock_message = Mock()
+        mock_message.content = "Response"
+        mock_response.choices[0].message = mock_message
         mock_response.choices[0].finish_reason = "stop"
         mock_response.model = "gpt-4o"
-        mock_response.usage = {
-            "prompt_tokens": 5,
-            "completion_tokens": 5,
-            "total_tokens": 10,
-        }
+        mock_usage = Mock()
+        mock_usage.prompt_tokens = 5
+        mock_usage.completion_tokens = 5
+        mock_usage.total_tokens = 10
+        mock_response.usage = mock_usage
 
         with patch(
             "litellm.acompletion", return_value=mock_response
@@ -120,12 +128,14 @@ class TestLiteLlmEmbedding:
         """Test basic embedding generation."""
         provider = LiteLlmProvider(provider_id="test", config={})
 
-        mock_response = {
-            "data": [{"embedding": [0.1, 0.2, 0.3], "index": 0}],
-            "usage": {"total_tokens": 5},
-        }
+        mock_response = Mock()
+        mock_response.data = [{"embedding": [0.1, 0.2, 0.3], "index": 0}]
+        mock_usage = Mock()
+        mock_usage.prompt_tokens = 5
+        mock_usage.total_tokens = 5
+        mock_response.usage = mock_usage
 
-        with patch("litellm.embedding", return_value=mock_response):
+        with patch("litellm.aembedding", return_value=mock_response):
             response = await provider.generate_embedding(
                 text="Hello world", model="text-embedding-3-small"
             )
@@ -140,13 +150,30 @@ class TestLiteLlmHealthCheck:
     @pytest.mark.asyncio
     async def test_health_check_healthy(self):
         """Test health check when provider is healthy."""
-        provider = LiteLlmProvider(provider_id="test", config={})
+        provider = LiteLlmProvider(
+            provider_id="test",
+            config={"models": [{"model_id": "test-model"}]}
+        )
 
-        with patch.object(provider, "list_models", return_value=[]):
+        # Mock successful chat completion for health check
+        mock_response = Mock()
+        mock_response.choices = [Mock()]
+        mock_message = Mock()
+        mock_message.content = "Hi"
+        mock_response.choices[0].message = mock_message
+        mock_response.choices[0].finish_reason = "stop"
+        mock_usage = Mock()
+        mock_usage.prompt_tokens = 1
+        mock_usage.completion_tokens = 1
+        mock_usage.total_tokens = 2
+        mock_response.usage = mock_usage
+
+        with patch("litellm.acompletion", return_value=mock_response):
             health = await provider.health_check()
 
-            assert health["status"] in ["healthy", "unhealthy", "degraded"]
+            assert health["status"] == "healthy"
             assert "latency_ms" in health
+            assert health["models_available"] == 1
 
 
 class TestProviderEdgeCases:
@@ -167,6 +194,6 @@ class TestProviderEdgeCases:
         """Test embedding generation error handling."""
         provider = LiteLlmProvider(provider_id="test", config={})
 
-        with patch("litellm.embedding", side_effect=Exception("API Error")):
+        with patch("litellm.aembedding", side_effect=Exception("API Error")):
             with pytest.raises(Exception):
                 await provider.generate_embedding(text="Test", model="embedding-model")
