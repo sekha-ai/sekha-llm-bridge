@@ -119,7 +119,7 @@ class LlmProvider(ABC):
         pass
 
     @abstractmethod
-    async def chat_completion_stream(
+    def chat_completion_stream(
         self,
         messages: List[ChatMessage],
         model: str,
