@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple
 
-from .config import ModelTask, settings
+from .config import ModelTask, get_settings
 from .pricing import estimate_cost
 from .providers.base import LlmProvider
 from .providers.litellm_provider import LiteLlmProvider
@@ -66,6 +66,7 @@ class ModelRegistry:
 
     def _initialize_providers(self):
         """Initialize providers from configuration."""
+        settings = get_settings()
         for provider_config in settings.providers:
             try:
                 # Create provider instance
@@ -225,6 +226,7 @@ class ModelRegistry:
         Returns:
             List of (provider_id, model_id, priority) sorted by priority
         """
+        settings = get_settings()
         candidates = []
 
         # If preferred model specified, try to find it first
