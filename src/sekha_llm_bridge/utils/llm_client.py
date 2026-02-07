@@ -3,7 +3,7 @@
 import logging
 from typing import Any, Dict, List, Optional
 
-from sekha_llm_bridge.config import ModelTask, settings
+from sekha_llm_bridge.config import ModelTask
 from sekha_llm_bridge.registry import registry
 
 logger = logging.getLogger(__name__)
