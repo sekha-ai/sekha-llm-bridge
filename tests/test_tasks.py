@@ -54,7 +54,7 @@ class TestEmbedTextTask:
         with patch(
             "sekha_llm_bridge.tasks.litellm.embedding", return_value=mock_response
         ) as mock_embed:
-            with patch("sekha_llm_bridge.tasks.settings") as mock_settings:
+            with patch("sekha_llm_bridge.tasks.global_settings") as mock_settings:
                 mock_settings.embedding_model = "default-embedding-model"
                 embed_text_task("Test")
 
