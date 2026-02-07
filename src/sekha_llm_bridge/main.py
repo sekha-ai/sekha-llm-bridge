@@ -3,6 +3,7 @@
 # src/sekha_llm_bridge/main.py
 
 import logging
+import os
 import time
 import uuid
 from contextlib import asynccontextmanager
@@ -13,7 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from prometheus_client import make_asgi_app
 
 # Internal imports - all from the package
-from sekha_llm_bridge.config import settings
+from sekha_llm_bridge.config import get_settings
 from sekha_llm_bridge.models import (ChatCompletionChoice,
                                      ChatCompletionRequest,
                                      ChatCompletionResponse,
@@ -34,9 +35,15 @@ from sekha_llm_bridge.services.summarization_service import \
     summarization_service
 from sekha_llm_bridge.utils.llm_client import llm_client
 
-# Configure logging
+# Configure logging with fallback
+try:
+    settings = get_settings()
+    log_level = settings.log_level.upper()
+except RuntimeError:
+    log_level = os.getenv("LOG_LEVEL", "INFO").upper()
+
 logging.basicConfig(
-    level=getattr(logging, settings.log_level.upper()),
+    level=getattr(logging, log_level),
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
@@ -149,12 +156,14 @@ async def health_check():
 async def embed_text_root(request: EmbedRequest):
     """Root-level embedding endpoint"""
     try:
+        settings = get_settings()
         embedding = await llm_client.generate_embedding(request.text, request.model)
         # Estimate tokens (rough: 1 token ≈ 4 chars)
         tokens_used = len(request.text) // 4
+        default_model = settings.default_models.embedding or "nomic-embed-text"
         return EmbedResponse(
             embedding=embedding,
-            model=request.model or settings.embedding_model,
+            model=request.model or default_model,
             dimension=len(embedding),
             tokens_used=tokens_used,
         )
@@ -173,6 +182,7 @@ async def summarize_messages_root(request: SummarizeRequest):
         )
 
     try:
+        settings = get_settings()
         # Build prompt from messages
         messages_str = "\n".join(request.messages)
         prompt = f"Summarize these messages. Level: {request.level}\n\n{messages_str}"
@@ -183,11 +193,12 @@ async def summarize_messages_root(request: SummarizeRequest):
 
         # Estimate tokens
         tokens_used = (len(messages_str) + len(summary)) // 4
+        default_model = settings.default_models.chat_smart or "llama3.1:8b"
 
         return SummarizeResponse(
             summary=summary.strip(),
             level=request.level,
-            model=request.model or settings.summarization_model,
+            model=request.model or default_model,
             message_count=len(request.messages),
             tokens_used=tokens_used,
         )
@@ -294,6 +305,7 @@ async def chat_completions(request: ChatCompletionRequest):
     Routes chat requests through bridge to Ollama.
     """
     try:
+        settings = get_settings()
         # Convert ChatMessage objects to dicts for llm_client
         messages_dict = [
             {"role": msg.role, "content": msg.content} for msg in request.messages
@@ -308,11 +320,12 @@ async def chat_completions(request: ChatCompletionRequest):
         )
 
         # Build OpenAI-compatible response
+        default_model = settings.default_models.chat_smart or "llama3.1:8b"
         response = ChatCompletionResponse(
             id=f"chatcmpl-{uuid.uuid4().hex[:8]}",
             object="chat.completion",
             created=int(time.time()),
-            model=request.model or settings.summarization_model,
+            model=request.model or default_model,
             choices=[
                 ChatCompletionChoice(
                     index=0,
@@ -369,10 +382,20 @@ async def root():
 if __name__ == "__main__":
     import uvicorn
 
+    try:
+        settings = get_settings()
+        host = settings.server_host
+        port = settings.server_port
+        log_level_str = settings.log_level.lower()
+    except RuntimeError:
+        host = os.getenv("HOST", "0.0.0.0")
+        port = int(os.getenv("PORT", "5001"))
+        log_level_str = os.getenv("LOG_LEVEL", "info").lower()
+
     uvicorn.run(
         "main:app",
-        host=settings.host,
-        port=settings.port,
+        host=host,
+        port=port,
         reload=True,
-        log_level=settings.log_level.lower(),
+        log_level=log_level_str,
     )
