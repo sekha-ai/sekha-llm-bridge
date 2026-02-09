@@ -15,7 +15,6 @@ Module 4 - Task 4.5: E2E Happy Path
 import asyncio
 import os
 import uuid
-from typing import Any, Dict, List
 
 import httpx
 import pytest
@@ -112,7 +111,7 @@ async def test_full_conversation_flow(async_client, api_headers):
         for result in search_results["results"]
     )
     assert found_conv, f"Conversation {conv_id} not found in search results"
-    print(f"✅ Found conversation in search results")
+    print("✅ Found conversation in search results")
 
     # Step 3: Retrieve conversation
     print(f"\n📖 Step 3: Retrieving conversation {conv_id}...")
@@ -127,7 +126,7 @@ async def test_full_conversation_flow(async_client, api_headers):
     assert retrieved["id"] == conv_id
     assert retrieved["label"] == conversation_data["label"]
     assert retrieved["folder"] == conversation_data["folder"]
-    print(f"✅ Retrieved conversation successfully")
+    print("✅ Retrieved conversation successfully")
 
     # Step 4: Verify routing was optimal
     print("\n🎯 Step 4: Verifying routing decisions...")
