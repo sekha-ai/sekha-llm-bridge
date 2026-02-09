@@ -186,24 +186,39 @@ jobs:
             -e ANONYMIZED_TELEMETRY=FALSE \
             chromadb/chroma:latest
           
-          echo "⏳ Waiting for Chroma to be ready..."
-          for i in {1..30}; do
-            if curl -sf http://localhost:8000/api/v1/heartbeat > /dev/null 2>&1; then
-              echo "✅ Chroma is ready (attempt $i/30)"
+          # Production uses condition: service_started (NOT healthy)
+          # So just wait for container to be running + API to respond
+          echo "⏳ Waiting for Chroma container to start..."
+          sleep 5
+          
+          echo "⏳ Waiting for Chroma API to respond..."
+          for i in {1..60}; do
+            # Try root endpoint first (simpler, more reliable)
+            if curl -sf http://localhost:8000/ > /dev/null 2>&1; then
+              echo "✅ Chroma root endpoint responding (attempt $i/60)"
+              # Give it a bit more time for full initialization
+              sleep 3
               break
             fi
-            if [ $i -eq 30 ]; then
-              echo "❌ Chroma timeout"
+            if [ $i -eq 60 ]; then
+              echo "❌ Chroma timeout after 120 seconds"
               echo "📋 Chroma logs:"
               docker logs chroma
+              echo "📋 Container status:"
+              docker ps -a | grep chroma
               exit 1
             fi
             sleep 2
           done
           
           echo "📊 Chroma status:"
-          curl -s http://localhost:8000/api/v1/heartbeat || echo "Heartbeat failed"
-          docker exec chroma ls -la /data || echo "Can't list /data"
+          echo "Container running:"
+          docker ps | grep chroma || echo "Container not running!"
+          echo "Checking endpoints:"
+          curl -v http://localhost:8000/ 2>&1 | head -20 || echo "Root endpoint failed"
+          curl -v http://localhost:8000/api/v1/heartbeat 2>&1 | head -20 || echo "Heartbeat failed"
+          echo "Data directory:"
+          docker exec chroma ls -la /data 2>&1 || echo "Can't list /data"
 
       - name: Start Ollama
         run: |
