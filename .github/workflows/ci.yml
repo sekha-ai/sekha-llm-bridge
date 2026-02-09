@@ -194,21 +194,44 @@ jobs:
         working-directory: controller
         run: cargo build --release
 
+      - name: Setup controller database
+        working-directory: controller
+        run: |
+          # Create a writable directory for the database
+          mkdir -p ${{ runner.temp }}/sekha-data
+          echo "Database directory: ${{ runner.temp }}/sekha-data"
+
       - name: Start controller
         working-directory: controller
         env:
           SEKHA_PORT: 8080
+          SEKHA_DATABASE_URL: sqlite://${{ runner.temp }}/sekha-data/sekha.db
           CHROMA_HOST: http://localhost:8000
           CHROMA_AUTH_TOKEN: ${{ env.CHROMA_AUTH_TOKEN }}
           REDIS_HOST: redis://localhost:6379/0
           SEKHA_API_KEY: test-token-123
+          SEKHA_LLM_BRIDGE_URL: http://localhost:5001
         run: |
           ./target/release/sekha-controller &
           CONTROLLER_PID=$!
           echo "CONTROLLER_PID=$CONTROLLER_PID" >> $GITHUB_ENV
-          sleep 5
-          curl -f http://localhost:8080/health || exit 1
-          echo "Controller is healthy"
+          
+          # Wait for controller to be ready (with detailed logging)
+          echo "Waiting for controller to start..."
+          for i in {1..30}; do
+            if curl -f http://localhost:8080/health 2>/dev/null; then
+              echo "✅ Controller is healthy"
+              break
+            fi
+            if [ $i -eq 30 ]; then
+              echo "❌ Controller health check timeout"
+              echo "Controller logs:"
+              ps aux | grep sekha-controller || true
+              exit 1
+            fi
+            echo "Attempt $i/30: Controller not ready yet..."
+            sleep 2
+          done
 
       - name: Install bridge dependencies
         working-directory: llm-bridge
