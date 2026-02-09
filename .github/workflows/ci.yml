@@ -133,24 +133,13 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
     services:
-      # Service 1: Redis (base dependency)
+      # Only Redis as service (Chroma needs volumes, run as container)
       redis:
         image: redis:7-alpine
         ports:
           - 6379:6379
         options: >-
           --health-cmd="redis-cli ping"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=5
-      
-      # Service 2: Chroma (base dependency)
-      chroma:
-        image: chromadb/chroma:latest
-        ports:
-          - 8000:8000
-        options: >-
-          --health-cmd="curl -f http://localhost:8000/api/v1/heartbeat || exit 1"
           --health-interval=10s
           --health-timeout=5s
           --health-retries=5
@@ -177,7 +166,44 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       # ============================================
-      # Step 1: Start Ollama (required by bridge)
+      # Step 1: Start Chroma (with proper config from docker-compose)
+      # ============================================
+      - name: Start Chroma
+        run: |
+          echo "🗄️ Starting Chroma DB..."
+          
+          # Create data directory
+          mkdir -p ${{ runner.temp }}/chroma-data
+          
+          # Start Chroma with proper configuration from docker-compose.prod.yml
+          docker run -d \
+            --name chroma \
+            -p 8000:8000 \
+            -v ${{ runner.temp }}/chroma-data:/chroma/chroma \
+            -e IS_PERSISTENT=TRUE \
+            -e ANONYMIZED_TELEMETRY=FALSE \
+            chromadb/chroma:latest
+          
+          echo "⏳ Waiting for Chroma to be ready..."
+          for i in {1..30}; do
+            if curl -sf http://localhost:8000/api/v1/heartbeat > /dev/null 2>&1; then
+              echo "✅ Chroma is ready (attempt $i/30)"
+              break
+            fi
+            if [ $i -eq 30 ]; then
+              echo "❌ Chroma timeout"
+              echo "📋 Chroma logs:"
+              docker logs chroma
+              exit 1
+            fi
+            sleep 2
+          done
+          
+          echo "📊 Chroma version:"
+          curl -s http://localhost:8000/api/v1/version || echo "Version endpoint not available"
+
+      # ============================================
+      # Step 2: Start Ollama (required by bridge)
       # ============================================
       - name: Start Ollama
         run: |
@@ -190,7 +216,7 @@ jobs:
           echo "⏳ Waiting for Ollama API..."
           for i in {1..30}; do
             if curl -sf http://localhost:11434/api/tags > /dev/null 2>&1; then
-              echo "✅ Ollama is ready"
+              echo "✅ Ollama is ready (attempt $i/30)"
               break
             fi
             if [ $i -eq 30 ]; then
@@ -207,7 +233,7 @@ jobs:
           echo "✅ Models ready"
 
       # ============================================
-      # Step 2: Start LLM Bridge (depends on Redis + Ollama)
+      # Step 3: Start LLM Bridge (depends on Redis + Ollama)
       # ============================================
       - name: Install and start LLM Bridge
         working-directory: llm-bridge
@@ -224,7 +250,7 @@ jobs:
           pip install -e .
           
           echo "🚀 Starting LLM Bridge..."
-          python -m sekha_llm_bridge.main &
+          python -m sekha_llm_bridge.main > ${{ runner.temp }}/bridge.log 2>&1 &
           BRIDGE_PID=$!
           echo "BRIDGE_PID=$BRIDGE_PID" >> $GITHUB_ENV
           
@@ -236,6 +262,8 @@ jobs:
             fi
             if [ $i -eq 60 ]; then
               echo "❌ LLM Bridge health check timeout"
+              echo "📋 Bridge logs:"
+              cat ${{ runner.temp }}/bridge.log || true
               echo "📋 Bridge process status:"
               ps aux | grep -E 'sekha_llm_bridge|PID' || true
               exit 1
@@ -250,7 +278,7 @@ jobs:
           curl -s http://localhost:5001/health | python -m json.tool || true
 
       # ============================================
-      # Step 3: Build and Start Controller (depends on all above)
+      # Step 4: Build and Start Controller (depends on all above)
       # ============================================
       - name: Build controller
         working-directory: controller
@@ -275,7 +303,7 @@ jobs:
           mkdir -p ${{ runner.temp }}/sekha-data
           
           echo "🚀 Starting controller..."
-          ./target/release/sekha-controller &
+          ./target/release/sekha-controller > ${{ runner.temp }}/controller.log 2>&1 &
           CONTROLLER_PID=$!
           echo "CONTROLLER_PID=$CONTROLLER_PID" >> $GITHUB_ENV
           
@@ -287,6 +315,9 @@ jobs:
             fi
             if [ $i -eq 120 ]; then
               echo "❌ Controller health check timeout"
+              echo ""
+              echo "📋 Controller logs:"
+              cat ${{ runner.temp }}/controller.log || true
               echo ""
               echo "📋 Controller process status:"
               ps aux | grep -E 'sekha-controller|PID' || true
@@ -305,7 +336,7 @@ jobs:
           curl -s http://localhost:8080/health | python -c "import sys, json; print(json.dumps(json.load(sys.stdin), indent=2))" || true
 
       # ============================================
-      # Step 4: Run Integration Tests
+      # Step 5: Run Integration Tests
       # ============================================
       - name: Run integration tests
         working-directory: llm-bridge
@@ -335,7 +366,9 @@ jobs:
             kill $BRIDGE_PID 2>/dev/null || true
           fi
           
-          echo "Stopping Ollama container"
+          echo "Stopping Docker containers"
+          docker stop chroma 2>/dev/null || true
+          docker rm chroma 2>/dev/null || true
           docker stop ollama 2>/dev/null || true
           docker rm ollama 2>/dev/null || true
           
