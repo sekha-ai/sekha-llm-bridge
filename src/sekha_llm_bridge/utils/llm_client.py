@@ -1,110 +1,155 @@
-"""Unified LLM client using LiteLLM"""
+"""Unified LLM client using v2.0 Provider Registry."""
 
-import litellm
-from typing import List, Dict, Any, Optional
-from tenacity import retry, stop_after_attempt, wait_exponential
 import logging
+from typing import Any, Dict, List, Optional
 
-from sekha_llm_bridge.config import settings
+from sekha_llm_bridge.config import ModelTask
+from sekha_llm_bridge.registry import registry
 
 logger = logging.getLogger(__name__)
 
-# Configure LiteLLM
-litellm.set_verbose = False
-litellm.drop_params = True  # Drop unsupported params
-
 
 class LLMClient:
-    """Unified interface for LLM operations"""
+    """Unified interface for LLM operations using provider registry."""
 
     def __init__(self):
-        self.ollama_base_url = settings.ollama_base_url
-        self.timeout = settings.ollama_timeout
+        """Initialize LLM client with provider registry."""
+        self.registry = registry
 
-    @retry(
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=2, max=10),
-        reraise=True,
-    )
     async def generate_embedding(
         self, text: str, model: Optional[str] = None
     ) -> List[float]:
-        """Generate embedding for text"""
-        model = model or settings.embedding_model
+        """Generate embedding for text using provider registry.
 
+        Args:
+            text: Text to embed
+            model: Optional specific model to use
+
+        Returns:
+            Embedding vector as list of floats
+
+        Raises:
+            RuntimeError: If no suitable provider available
+        """
         try:
-            response = await litellm.aembedding(
-                model=f"ollama/{model}",
-                input=text,
-                api_base=self.ollama_base_url,
-                timeout=self.timeout,
+            # Route to appropriate provider
+            routing_result = await self.registry.route_with_fallback(
+                task=ModelTask.EMBEDDING,
+                preferred_model=model,
             )
 
-            return response.data[0]["embedding"]
+            # Execute embedding request
+            result = await self.registry.execute_with_circuit_breaker(
+                provider_id=routing_result.provider.provider_id,
+                operation=routing_result.provider.generate_embedding,
+                text=text,
+                model=routing_result.model_id,
+            )
+
+            return result.embedding
 
         except Exception as e:
             logger.error(f"Embedding generation failed: {e}")
             raise
 
-    @retry(
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=2, max=10),
-        reraise=True,
-    )
     async def generate_completion(
         self,
         messages: List[Dict[str, str]],
         model: Optional[str] = None,
         temperature: float = 0.7,
         max_tokens: int = 2000,
+        require_vision: bool = False,
     ) -> str:
-        """Generate LLM completion"""
-        model = model or settings.summarization_model
+        """Generate LLM completion using provider registry.
 
+        Args:
+            messages: Chat messages
+            model: Optional specific model to use
+            temperature: Sampling temperature
+            max_tokens: Maximum tokens to generate
+            require_vision: Whether vision support is required
+
+        Returns:
+            Generated text content
+
+        Raises:
+            RuntimeError: If no suitable provider available
+        """
         try:
-            response = await litellm.acompletion(
-                model=f"ollama/{model}",
-                messages=messages,
-                api_base=self.ollama_base_url,
-                temperature=temperature,
-                max_tokens=max_tokens,
-                timeout=self.timeout,
+            # Determine task type based on model preference
+            # Default to chat_smart if no model specified
+            task = ModelTask.CHAT_SMART
+            if model:
+                # Check if model name suggests a specific task
+                model_lower = model.lower()
+                if "mini" in model_lower or "small" in model_lower:
+                    task = ModelTask.CHAT_SMALL
+                elif "large" in model_lower:
+                    task = ModelTask.CHAT_LARGE
+
+            # Route to appropriate provider
+            routing_result = await self.registry.route_with_fallback(
+                task=task,
+                preferred_model=model,
+                require_vision=require_vision,
             )
 
-            return response.choices[0].message.content
+            # Convert messages to ChatMessage format
+            from sekha_llm_bridge.providers.base import ChatMessage, MessageRole
+
+            chat_messages = [
+                ChatMessage(role=MessageRole(msg["role"]), content=msg["content"])
+                for msg in messages
+            ]
+
+            # Execute completion request
+            result = await self.registry.execute_with_circuit_breaker(
+                provider_id=routing_result.provider.provider_id,
+                operation=routing_result.provider.chat_completion,
+                messages=chat_messages,
+                model=routing_result.model_id,
+                temperature=temperature,
+                max_tokens=max_tokens,
+            )
+
+            return result.content
 
         except Exception as e:
             logger.error(f"LLM completion failed: {e}")
             raise
 
     async def health_check(self) -> Dict[str, Any]:
-        """Check Ollama health and available models"""
-        import httpx
+        """Check health of all registered providers.
 
+        Returns:
+            Dictionary with provider health status
+        """
         try:
-            async with httpx.AsyncClient(timeout=5.0) as client:
-                # Check if Ollama is running
-                response = await client.get(f"{self.ollama_base_url}/api/tags")
+            provider_health = self.registry.get_provider_health()
+            models = self.registry.list_all_models()
 
-                if response.status_code == 200:
-                    models = response.json().get("models", [])
+            # Check if we have essential capabilities
+            has_embedding = any(m["task"] == "embedding" for m in models)
+            has_chat = any(
+                m["task"] in ["chat_small", "chat_smart", "chat_large"] for m in models
+            )
 
-                    return {
-                        "status": "healthy",
-                        "ollama_url": self.ollama_base_url,
-                        "models_available": [m["name"] for m in models],
-                        "embedding_model_ready": any(
-                            settings.embedding_model in m["name"] for m in models
-                        ),
-                        "summarization_model_ready": any(
-                            settings.summarization_model in m["name"] for m in models
-                        ),
-                    }
+            status = "healthy" if (has_embedding and has_chat) else "degraded"
 
-                return {"status": "unhealthy", "reason": f"HTTP {response.status_code}"}
+            return {
+                "status": status,
+                "providers": provider_health,
+                "models_count": len(models),
+                "has_embedding": has_embedding,
+                "has_chat": has_chat,
+            }
 
         except Exception as e:
-            return {"status": "unhealthy", "reason": str(e)}
+            logger.error(f"Health check failed: {e}")
+            return {
+                "status": "unhealthy",
+                "reason": str(e),
+            }
 
 
 # Global client instance

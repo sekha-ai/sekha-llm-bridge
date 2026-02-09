@@ -1,26 +1,44 @@
-from typing import List
+"""Background tasks for LLM operations.
+
+Note: These tasks reference settings attributes that don't exist in the v2.0 config.
+They should be refactored to use the provider registry instead.
+For now, adding assertions to satisfy mypy.
+"""
+
+from typing import List, cast
+
 import litellm
-from .celery_app import celery_app
-from .config import settings
+
+from . import config
+from .config import get_settings
+from .workers.celery_app import celery_app
+
+# Expose global_settings for tests to patch
+global_settings = config.settings
 
 
 @celery_app.task(name="tasks.embed_text")
 def embed_text_task(text: str, model: str | None = None) -> list[float]:
-    model_name = model or settings.embedding_model
+    # TODO: Refactor to use provider registry
+    settings = get_settings()
+    model_name = model or settings.default_models.embedding or "text-embedding-ada-002"
     # Use LiteLLM embeddings where supported; fall back to simple OpenAI format
     response = litellm.embedding(
         model=model_name,
         input=text,
     )
     # LiteLLM returns OpenAI-style structure
-    return response["data"][0]["embedding"]
+    embedding = cast(list[float], response["data"][0]["embedding"])
+    return embedding
 
 
 @celery_app.task(name="tasks.summarize_messages")
 def summarize_messages_task(
     messages: List[str], level: str, model: str | None = None
 ) -> str:
-    model_name = model or settings.summarization_model
+    # TODO: Refactor to use provider registry
+    settings = get_settings()
+    model_name = model or settings.default_models.chat_smart or "gpt-4o-mini"
     joined = "\n".join(messages)
 
     system_prompt = (
@@ -40,12 +58,15 @@ def summarize_messages_task(
         temperature=0.2,
     )
 
-    return completion.choices[0].message["content"]
+    content = cast(str, completion.choices[0].message["content"])
+    return content
 
 
 @celery_app.task(name="tasks.extract_entities")
 def extract_entities_task(text: str, model: str | None = None) -> list[dict]:
-    model_name = model or settings.extraction_model
+    # TODO: Refactor to use provider registry
+    settings = get_settings()
+    model_name = model or settings.default_models.chat_fast or "gpt-4o-mini"
 
     system_prompt = (
         "Extract named entities from the text as JSON with fields: "
@@ -76,7 +97,9 @@ def extract_entities_task(text: str, model: str | None = None) -> list[dict]:
 
 @celery_app.task(name="tasks.score_importance")
 def score_importance_task(text: str, model: str | None = None) -> float:
-    model_name = model or settings.summarization_model
+    # TODO: Refactor to use provider registry
+    settings = get_settings()
+    model_name = model or settings.default_models.chat_smart or "gpt-4o-mini"
 
     system_prompt = (
         "You are an importance scoring assistant. "
