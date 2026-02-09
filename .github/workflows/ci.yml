@@ -165,21 +165,18 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       # ============================================
-      # Infrastructure: Start with v0.1.0 config (working version)
+      # Infrastructure: Chroma with correct path
       # ============================================
-      - name: Start Chroma (v0.1.0 config - named volume, no env vars)
+      - name: Start Chroma
         run: |
-          echo "🗄️ Starting Chroma DB with v0.1.0 configuration..."
+          echo "🗄️ Starting Chroma DB..."
           
-          # Create named volume (faster than bind mount for ChromaDB)
-          docker volume create chroma-data
-          
-          # Start Chroma WITHOUT environment variables (they break persistence path)
-          # Use named volume at /chroma/chroma (v0.1.0 path)
+          # Chroma's default persist_path is /data (as seen in logs)
+          # Mount volume at /data to match Chroma's expectation
           docker run -d \
             --name chroma \
             -p 8000:8000 \
-            -v chroma-data:/chroma/chroma \
+            -v ${{ runner.temp }}/chroma-data:/data \
             chromadb/chroma:latest
           
           echo "⏳ Waiting for Chroma to be ready..."
@@ -196,6 +193,9 @@ jobs:
             fi
             sleep 2
           done
+          
+          echo "📊 Chroma version and config:"
+          curl -s http://localhost:8000/api/v1/version || echo "Version endpoint not available"
 
       - name: Start Ollama
         run: |
@@ -364,9 +364,6 @@ jobs:
           docker stop ollama 2>/dev/null || true
           docker rm ollama 2>/dev/null || true
           
-          echo "Cleaning up Docker volumes"
-          docker volume rm chroma-data 2>/dev/null || true
-          
           echo "✅ Cleanup complete"
 
 
@@ -465,6 +462,6 @@ jobs:
             exit 1
           fi
           if [ "${{ needs.security.result }}" == "failure" ]; then
-            echo "⚠️  Security audit had issues"
+            echo "⚠️ Security audit had issues"
           fi
           echo "✅ All required checks passed!"
