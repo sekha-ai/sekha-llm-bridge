@@ -133,6 +133,7 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
     services:
+      # Service 1: Redis (base dependency)
       redis:
         image: redis:7-alpine
         ports:
@@ -142,10 +143,17 @@ jobs:
           --health-interval=10s
           --health-timeout=5s
           --health-retries=5
+      
+      # Service 2: Chroma (base dependency)
       chroma:
         image: chromadb/chroma:latest
         ports:
           - 8000:8000
+        options: >-
+          --health-cmd="curl -f http://localhost:8000/api/v1/heartbeat || exit 1"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
 
     steps:
       - name: Checkout llm-bridge
@@ -168,147 +176,170 @@ jobs:
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Clean up Docker resources
-        run: |
-          docker system prune -af --volumes || true
-
+      # ============================================
+      # Step 1: Start Ollama (required by bridge)
+      # ============================================
       - name: Start Ollama
         run: |
+          echo "🚀 Starting Ollama..."
           docker run -d \
             --name ollama \
             -p 11434:11434 \
             ollama/ollama:latest
+          
+          echo "⏳ Waiting for Ollama API..."
           for i in {1..30}; do
-            if curl -f http://localhost:11434/api/tags; then
-              echo "Ollama ready"
+            if curl -sf http://localhost:11434/api/tags > /dev/null 2>&1; then
+              echo "✅ Ollama is ready"
               break
+            fi
+            if [ $i -eq 30 ]; then
+              echo "❌ Ollama timeout"
+              exit 1
             fi
             sleep 2
           done
 
       - name: Pull required models
         run: |
+          echo "📦 Pulling embedding model..."
           docker exec ollama ollama pull nomic-embed-text:latest
+          echo "✅ Models ready"
 
+      # ============================================
+      # Step 2: Start LLM Bridge (depends on Redis + Ollama)
+      # ============================================
+      - name: Install and start LLM Bridge
+        working-directory: llm-bridge
+        env:
+          OLLAMA_BASE_URL: http://localhost:11434
+          REDIS_URL: redis://localhost:6379/0
+          HOST: 0.0.0.0
+          PORT: 5001
+          LOG_LEVEL: info
+        run: |
+          echo "📦 Installing LLM Bridge dependencies..."
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -e .
+          
+          echo "🚀 Starting LLM Bridge..."
+          python -m sekha_llm_bridge.main &
+          BRIDGE_PID=$!
+          echo "BRIDGE_PID=$BRIDGE_PID" >> $GITHUB_ENV
+          
+          echo "⏳ Waiting for LLM Bridge health check..."
+          for i in {1..60}; do
+            if curl -sf http://localhost:5001/health > /dev/null 2>&1; then
+              echo "✅ LLM Bridge is healthy (attempt $i/60)"
+              break
+            fi
+            if [ $i -eq 60 ]; then
+              echo "❌ LLM Bridge health check timeout"
+              echo "📋 Bridge process status:"
+              ps aux | grep -E 'sekha_llm_bridge|PID' || true
+              exit 1
+            fi
+            if [ $((i % 10)) -eq 0 ]; then
+              echo "⏳ Still waiting for bridge... ($i/60)"
+            fi
+            sleep 1
+          done
+          
+          echo "📊 Testing bridge health endpoint:"
+          curl -s http://localhost:5001/health | python -m json.tool || true
+
+      # ============================================
+      # Step 3: Build and Start Controller (depends on all above)
+      # ============================================
       - name: Build controller
         working-directory: controller
-        run: cargo build --release --bin sekha-controller
-
-      - name: Setup controller database
-        working-directory: controller
         run: |
-          # Create a writable directory for the database
-          mkdir -p ${{ runner.temp }}/sekha-data
-          echo "Database directory: ${{ runner.temp }}/sekha-data"
+          echo "🔨 Building controller..."
+          cargo build --release --bin sekha-controller
 
-      - name: Initialize database and start controller
+      - name: Start controller
         working-directory: controller
         env:
-          SEKHA_PORT: 8080
-          SEKHA_DATABASE_URL: sqlite://${{ runner.temp }}/sekha-data/sekha.db
-          CHROMA_HOST: http://localhost:8000
-          CHROMA_URL: http://localhost:8000
-          CHROMA_AUTH_TOKEN: ${{ env.CHROMA_AUTH_TOKEN }}
-          REDIS_HOST: redis://localhost:6379/0
-          SEKHA_API_KEY: test-token-123
-          SEKHA_LLM_BRIDGE_URL: http://localhost:5001
-          SEKHA_MCP_API_KEY: test-token-123-456-789-012345678901
           SEKHA_SERVER_HOST: 0.0.0.0
           SEKHA_SERVER_PORT: 8080
+          SEKHA_DATABASE_URL: sqlite://${{ runner.temp }}/sekha-data/sekha.db
+          SEKHA_CHROMA_URL: http://localhost:8000
+          SEKHA_LLM_BRIDGE_URL: http://localhost:5001
+          SEKHA_MCP_API_KEY: test-token-123-456-789-012345678901234
+          SEKHA_REST_API_KEY: test-token-123
+          SEKHA_LOG_LEVEL: info
+          REDIS_HOST: redis://localhost:6379/0
         run: |
-          # Build a quick Rust program to initialize the database
-          cat > init_db.rs << 'EOF'
-          use std::env;
+          echo "📂 Creating database directory..."
+          mkdir -p ${{ runner.temp }}/sekha-data
           
-          #[tokio::main]
-          async fn main() -> Result<(), Box<dyn std::error::Error>> {
-              let db_url = env::var("SEKHA_DATABASE_URL")
-                  .unwrap_or_else(|_| "sqlite://sekha.db".to_string());
-              
-              println!("Initializing database: {}", db_url);
-              
-              // Use the controller's init_db function
-              match sekha_controller::storage::db::init_db(&db_url).await {
-                  Ok(_) => {
-                      println!("✅ Database initialized successfully");
-                      Ok(())
-                  }
-                  Err(e) => {
-                      eprintln!("❌ Database initialization failed: {}", e);
-                      Err(e.into())
-                  }
-              }
-          }
-          EOF
-          
-          # Compile and run the initialization
-          echo "🔧 Compiling database initializer..."
-          rustc --edition 2021 \
-            --extern tokio=target/release/deps/libtokio-*.rlib \
-            --extern sekha_controller=target/release/libsekha_controller.rlib \
-            -L target/release/deps \
-            init_db.rs -o init_db 2>/dev/null || {
-            # If compilation fails, just use the binary directly and let it create the DB
-            echo "⚠️  Could not compile initializer, controller will create DB on first run"
-          }
-          
-          # Start controller in background
           echo "🚀 Starting controller..."
           ./target/release/sekha-controller &
           CONTROLLER_PID=$!
           echo "CONTROLLER_PID=$CONTROLLER_PID" >> $GITHUB_ENV
           
-          # Wait for controller to be ready (with detailed logging)
-          echo "⏳ Waiting for controller to start..."
-          MAX_ATTEMPTS=60
-          for i in $(seq 1 $MAX_ATTEMPTS); do
+          echo "⏳ Waiting for controller health check..."
+          for i in {1..120}; do
             if curl -sf http://localhost:8080/health > /dev/null 2>&1; then
-              echo "✅ Controller is healthy (attempt $i/$MAX_ATTEMPTS)"
+              echo "✅ Controller is healthy (attempt $i/120)"
               break
             fi
-            if [ $i -eq $MAX_ATTEMPTS ]; then
-              echo "❌ Controller health check timeout after $MAX_ATTEMPTS attempts"
+            if [ $i -eq 120 ]; then
+              echo "❌ Controller health check timeout"
               echo ""
               echo "📋 Controller process status:"
               ps aux | grep -E 'sekha-controller|PID' || true
               echo ""
-              echo "📋 Last 50 lines of controller output:"
-              jobs -l || true
-              echo ""
-              echo "📋 Checking port 8080:"
-              netstat -tlnp 2>/dev/null | grep 8080 || ss -tlnp 2>/dev/null | grep 8080 || echo "Port 8080 not listening"
+              echo "📋 Port status:"
+              netstat -tlnp 2>/dev/null | grep -E '8080|5001|8000|6379' || ss -tlnp 2>/dev/null | grep -E '8080|5001|8000|6379' || true
               exit 1
             fi
-            if [ $((i % 5)) -eq 0 ]; then
-              echo "⏳ Still waiting... (attempt $i/$MAX_ATTEMPTS)"
+            if [ $((i % 10)) -eq 0 ]; then
+              echo "⏳ Still waiting for controller... ($i/120)"
             fi
             sleep 1
           done
+          
+          echo "📊 Testing controller health endpoint:"
+          curl -s http://localhost:8080/health | python -c "import sys, json; print(json.dumps(json.load(sys.stdin), indent=2))" || true
 
-      - name: Install bridge dependencies
-        working-directory: llm-bridge
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install -e .
-
+      # ============================================
+      # Step 4: Run Integration Tests
+      # ============================================
       - name: Run integration tests
         working-directory: llm-bridge
         env:
-          OLLAMA_HOST: ${{ env.OLLAMA_HOST }}
-          REDIS_URL: ${{ env.REDIS_URL }}
+          OLLAMA_HOST: http://localhost:11434
+          REDIS_URL: redis://localhost:6379/0
           CONTROLLER_URL: http://localhost:8080
         run: |
-          pytest tests/integration/ -v
+          echo "🧪 Running integration tests..."
+          pytest tests/integration/ -v --tb=short
 
+      # ============================================
+      # Cleanup
+      # ============================================
       - name: Cleanup
         if: always()
         run: |
+          echo "🧹 Cleaning up services..."
+          
           if [ ! -z "$CONTROLLER_PID" ]; then
-            kill $CONTROLLER_PID || true
+            echo "Stopping controller (PID: $CONTROLLER_PID)"
+            kill $CONTROLLER_PID 2>/dev/null || true
           fi
-          docker stop ollama || true
-          docker rm ollama || true
+          
+          if [ ! -z "$BRIDGE_PID" ]; then
+            echo "Stopping LLM bridge (PID: $BRIDGE_PID)"
+            kill $BRIDGE_PID 2>/dev/null || true
+          fi
+          
+          echo "Stopping Ollama container"
+          docker stop ollama 2>/dev/null || true
+          docker rm ollama 2>/dev/null || true
+          
+          echo "✅ Cleanup complete"
 
 
   security:
