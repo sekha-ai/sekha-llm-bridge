@@ -184,22 +184,28 @@ class TestCircuitBreakerStateTransitions:
         # Force circuit breaker to open
         cb.record_failure(Exception("Error 1"))
         cb.record_failure(Exception("Error 2"))
-        assert cb.get_state() == CircuitState.OPEN
+        
+        # Check state directly (without triggering transition)
+        assert cb.state == CircuitState.OPEN
 
-        # After timeout, should transition to half-open
-        assert not cb.is_open()  # is_open() triggers transition
+        # Now calling get_state() or is_open() triggers transition to half-open
+        assert not cb.is_open()  # is_open() triggers transition and returns False
         assert cb.get_state() == CircuitState.HALF_OPEN
 
     def test_circuit_breaker_closes_after_half_open_successes(self):
         """Test circuit breaker closes after successes in half-open."""
-        cb = CircuitBreaker(failure_threshold=2, timeout_secs=0, success_threshold=2)
+        cb = CircuitBreaker(
+            failure_threshold=2, timeout_secs=0, success_threshold=2
+        )
 
         # Open the circuit
         cb.record_failure(Exception("Error 1"))
         cb.record_failure(Exception("Error 2"))
-        assert cb.get_state() == CircuitState.OPEN
+        
+        # Check state directly without triggering transition
+        assert cb.state == CircuitState.OPEN
 
-        # Transition to half-open
+        # Transition to half-open (timeout=0 means immediate)
         cb.is_open()  # Triggers transition after timeout
         assert cb.get_state() == CircuitState.HALF_OPEN
 
@@ -218,7 +224,9 @@ class TestCircuitBreakerStateTransitions:
         # Open the circuit
         cb.record_failure(Exception("Error 1"))
         cb.record_failure(Exception("Error 2"))
-        assert cb.get_state() == CircuitState.OPEN
+        
+        # Check state directly
+        assert cb.state == CircuitState.OPEN
 
         # Transition to half-open
         cb.is_open()
