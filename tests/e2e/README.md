@@ -1,397 +1,323 @@
 # End-to-End (E2E) Tests
 
-Comprehensive E2E tests for Sekha v2.0 multi-provider architecture.
+True end-to-end tests that verify the complete sekha-llm-bridge system in a real runtime environment.
 
 ## Overview
 
-These tests verify the complete system behavior across multiple components:
-- **Controller** (Rust API)
-- **Bridge** (Python LLM routing)
-- **ChromaDB** (Vector storage)
-- **Ollama** (Local LLM runtime)
-- **Cloud Providers** (Optional: OpenAI, Anthropic, etc.)
+E2E tests require a **running instance** of the sekha-llm-bridge server. These tests:
 
-## Test Files
+- Make real HTTP requests to the API
+- Exercise actual provider integrations (Ollama, OpenAI, Anthropic, etc.)
+- Verify complete workflows from request to response
+- Observe real system behavior under various conditions
 
-### `test_full_flow.py`
-**Complete conversation lifecycle tests**
+**⚠️ Important:** E2E tests will **automatically skip** if no server is detected. This ensures CI/CD pipelines can run unit and integration tests without requiring a running server.
 
-- ✅ Store conversation via controller
-- ✅ Verify embedding in correct dimension collection
-- ✅ Search for stored conversation
-- ✅ Retrieve full conversation details
-- ✅ Verify optimal model selection
-- ✅ Test multi-dimension workflows
-- ✅ Verify cost tracking
-- ✅ Test search ranking quality
-- ✅ Test concurrent operations
+## Test Categories
 
-### `test_resilience.py`
-**Failure handling and recovery tests**
+### 1. Full Flow Tests (`test_full_flow.py`)
 
-- ✅ Test provider fallback mechanisms
-- ✅ Verify circuit breaker opening on failures
-- ✅ Test circuit breaker recovery
-- ✅ Verify graceful degradation
-- ✅ Test data consistency during failures
-- ✅ Test timeout handling
+Tests complete conversation lifecycle:
+- Conversation storage and retrieval
+- Embedding generation with multiple dimensions
+- Search functionality and ranking
+- Cost tracking across operations
+- Concurrent request handling
 
-## Prerequisites
+### 2. Resilience Tests (`test_resilience.py`)
 
-### Required Services
+Tests system resilience and recovery:
+- Provider fallback behavior
+- Circuit breaker state transitions
+- Graceful degradation under constraints
+- Data consistency during failures
+- Timeout handling
 
-```bash
-# 1. Start full Sekha stack
-cd sekha-docker
-docker-compose -f docker-compose.v2.yml up -d
+## Running E2E Tests
 
-# Verify all services are running
-docker-compose ps
-```
+### Prerequisites
 
-Expected services:
-- ✅ sekha-controller (port 8080)
-- ✅ sekha-bridge (port 5001)
-- ✅ chroma (port 8000)
-- ✅ ollama (port 11434)
-- ✅ postgres (port 5432)
-- ✅ redis (port 6379)
+1. **Running Server**
+   ```bash
+   # Terminal 1: Start the server
+   python -m sekha_llm_bridge.main
+   ```
 
-### Environment Variables
+2. **Provider Configuration**
+   - At least one provider configured (e.g., Ollama running locally)
+   - API keys set in environment for cloud providers (optional)
 
-```bash
-# Required
-export SEKHA_CONTROLLER_URL="http://localhost:8080"
-export SEKHA_BRIDGE_URL="http://localhost:5001"
-export SEKHA_API_KEY="test_key_12345678901234567890123456789012"
-
-# Optional (for cloud provider tests)
-export OPENAI_API_KEY="sk-..."
-export ANTHROPIC_API_KEY="sk-ant-..."
-```
-
-### Python Dependencies
-
-```bash
-cd sekha-llm-bridge
-pip install -e ".[dev]"
-
-# Or install specific test dependencies
-pip install pytest pytest-asyncio httpx
-```
-
-## Running Tests
+3. **Environment Variables** (optional)
+   ```bash
+   export SEKHA_BRIDGE_URL="http://localhost:5001"    # Default
+   export SEKHA_CONTROLLER_URL="http://localhost:8080" # Default
+   export SEKHA_API_KEY="your_api_key"                # Optional
+   export TEST_BASE_URL="http://localhost:8000"       # For conftest health check
+   ```
 
 ### Run All E2E Tests
 
 ```bash
-# From sekha-llm-bridge root
-pytest tests/e2e/ -v -m e2e -s
+# Terminal 2: Run tests
+pytest tests/e2e/ -v -s
 ```
 
-### Run Specific Test File
+### Run Specific Test Files
 
 ```bash
-# Full flow tests only
-pytest tests/e2e/test_full_flow.py -v -m e2e -s
+# Run only full flow tests
+pytest tests/e2e/test_full_flow.py -v -s
 
-# Resilience tests only
-pytest tests/e2e/test_resilience.py -v -m e2e -s
+# Run only resilience tests
+pytest tests/e2e/test_resilience.py -v -s
 ```
 
-### Run Specific Test
+### Run Specific Tests
 
 ```bash
-# Single test function
+# Run a single test
 pytest tests/e2e/test_full_flow.py::test_full_conversation_flow -v -s
 
-# Test with specific markers
-pytest tests/e2e/ -v -m "e2e and not slow" -s
+# Run tests matching a pattern
+pytest tests/e2e/ -k "fallback" -v -s
 ```
 
-### Run with Different Verbosity
+### Run with Markers
 
 ```bash
-# Minimal output
-pytest tests/e2e/ -m e2e -q
+# Run only E2E tests (skips unit/integration)
+pytest -m e2e -v -s
 
-# Verbose output (recommended)
-pytest tests/e2e/ -m e2e -v -s
+# Run slow tests
+pytest -m slow -v -s
 
-# Extra verbose (show all details)
-pytest tests/e2e/ -m e2e -vv -s
+# Exclude slow tests
+pytest -m "not slow" -v -s
 ```
 
-## Test Markers
+## Auto-Skip Behavior
 
-- `@pytest.mark.e2e` - End-to-end test (requires full stack)
-- `@pytest.mark.slow` - Test takes >1 second
-- `@pytest.mark.asyncio` - Async test function
+### How It Works
 
-## Expected Output
+The `conftest.py` fixture automatically checks for a running server:
 
-### Successful Run
+1. Attempts to connect to `{TEST_BASE_URL}/health`
+2. If successful (200 OK), tests proceed
+3. If connection fails, **all E2E tests are skipped** with a helpful message
 
-```
-tests/e2e/test_full_flow.py::test_full_conversation_flow 
-📝 Step 1: Creating conversation...
-✅ Created conversation: a1b2c3d4-...
-
-🔍 Step 2: Searching for conversation...
-✅ Found conversation in search results
-
-📖 Step 3: Retrieving conversation a1b2c3d4-...
-✅ Retrieved conversation successfully
-
-🎯 Step 4: Verifying routing decisions...
-✅ 2 healthy providers available
-
-✅ Full conversation flow test PASSED
-PASSED
-
-tests/e2e/test_resilience.py::test_provider_fallback
-🔄 Testing provider fallback...
-
-🏛️ Step 1: Checking provider health...
-✅ 2/2 providers healthy
-
-🧪 Step 2: Testing routing...
-✅ Primary provider: ollama_local
-   Model: nomic-embed-text
-   Cost: $0.0000
-
-💰 Step 3: Testing cost-based fallback...
-✅ Fallback provider: ollama_local
-   Model: nomic-embed-text
-   Cost: $0.0000
-✅ Provider fallback test PASSED
-PASSED
-
-============================================
-2 passed in 12.34s
-============================================
-```
-
-### Failed Run (Services Not Available)
+### Skip Message Example
 
 ```
-tests/e2e/test_full_flow.py::test_full_conversation_flow
-📝 Step 1: Creating conversation...
-E   AssertionError: Failed to create conversation: Connection refused
-FAILED
+SKIPPED [1] tests/e2e/conftest.py:XX: 
 
-============================================
-1 failed in 0.56s
-============================================
+⚠️  E2E Test Server Not Available
+─────────────────────────────────────────────
+
+E2E tests require a running sekha-llm-bridge server at:
+  http://localhost:8000
+
+To run E2E tests:
+
+  1. Start the server in a separate terminal:
+     $ python -m sekha_llm_bridge.main
+
+  2. Run E2E tests:
+     $ pytest tests/e2e/ -v
+
+  Or run with a custom URL:
+     $ TEST_BASE_URL=http://localhost:9000 pytest tests/e2e/ -v
+
+Note: Unit and integration tests do not require a running server.
+      Run them with: pytest tests/unit/ tests/integration/ -v
+```
+
+## Configuration
+
+### Custom Server URL
+
+If your server runs on a different port:
+
+```bash
+TEST_BASE_URL=http://localhost:9000 pytest tests/e2e/ -v
+```
+
+### Remote Server
+
+Test against a deployed instance:
+
+```bash
+TEST_BASE_URL=https://api.example.com pytest tests/e2e/ -v
+```
+
+### Custom Timeouts
+
+The async_client fixture uses a 30-second timeout by default. To customize:
+
+1. Edit `tests/e2e/conftest.py`
+2. Modify the `timeout` parameter in the `async_client` fixture
+
+## CI/CD Integration
+
+### GitHub Actions Example
+
+```yaml
+# Run unit and integration tests (no server required)
+- name: Run Unit and Integration Tests
+  run: |
+    pytest tests/unit/ tests/integration/ -v --cov
+
+# E2E tests are skipped automatically if server not running
+- name: Run All Tests (E2E skipped)
+  run: |
+    pytest tests/ -v
+```
+
+### Running E2E in CI (Optional)
+
+If you want to run E2E tests in CI:
+
+```yaml
+- name: Start Server
+  run: |
+    python -m sekha_llm_bridge.main &
+    sleep 5  # Wait for server startup
+
+- name: Run E2E Tests
+  run: |
+    pytest tests/e2e/ -v -s
+  env:
+    TEST_BASE_URL: http://localhost:8000
+
+- name: Stop Server
+  run: |
+    pkill -f "sekha_llm_bridge.main"
 ```
 
 ## Troubleshooting
 
-### Issue: Connection Refused
+### Tests Are Skipped
 
-**Symptoms:**
-```
-Failed to create conversation: Connection refused
-```
+**Symptom:** All E2E tests show as `SKIPPED`
 
-**Solutions:**
-1. Verify services are running:
+**Solution:**
+1. Verify server is running:
    ```bash
-   docker-compose ps
-   curl http://localhost:8080/health
-   curl http://localhost:5001/health
+   curl http://localhost:8000/health
+   ```
+2. Check the URL in `TEST_BASE_URL` matches your server
+3. Ensure no firewall blocking localhost connections
+
+### Connection Errors
+
+**Symptom:** `httpx.ConnectError: All connection attempts failed`
+
+**Solution:**
+1. Confirm server is listening on the correct port:
+   ```bash
+   netstat -an | grep 8000
+   ```
+2. Check server logs for startup errors
+3. Verify no other service is using the port
+
+### Tests Timeout
+
+**Symptom:** Tests hang or timeout after 30 seconds
+
+**Solution:**
+1. Check if providers are responding (especially Ollama)
+2. Verify network connectivity to cloud providers
+3. Review circuit breaker states: `GET /api/v1/health/providers`
+
+### Provider Not Available
+
+**Symptom:** Test fails with "No suitable providers available"
+
+**Solution:**
+1. Ensure at least one provider is configured and healthy
+2. For local testing, run Ollama:
+   ```bash
+   ollama serve
+   ollama pull nomic-embed-text
+   ```
+3. Check provider health:
+   ```bash
+   curl http://localhost:8000/api/v1/health/providers
    ```
 
-2. Check service logs:
+## Best Practices
+
+### Development Workflow
+
+1. **During Development:**
    ```bash
-   docker-compose logs controller
-   docker-compose logs bridge
+   # Terminal 1: Server with auto-reload
+   uvicorn sekha_llm_bridge.main:app --reload
+   
+   # Terminal 2: Run tests in watch mode
+   pytest-watch tests/e2e/ -v -s
    ```
 
-3. Restart services:
+2. **Before Commit:**
    ```bash
-   docker-compose restart
+   # Run all test types
+   pytest tests/ -v --cov
    ```
 
-### Issue: API Key Authentication Failed
+3. **Pre-PR Checklist:**
+   - [ ] Unit tests pass
+   - [ ] Integration tests pass
+   - [ ] E2E tests pass (with server running)
+   - [ ] Coverage meets threshold
 
-**Symptoms:**
-```
-401 Unauthorized
-```
+### Writing New E2E Tests
 
-**Solutions:**
-1. Verify API key is set:
-   ```bash
-   echo $SEKHA_API_KEY
-   ```
-
-2. Check controller configuration:
-   ```bash
-   docker-compose exec controller cat /app/config.yaml
-   ```
-
-3. Use correct default key:
-   ```bash
-   export SEKHA_API_KEY="test_key_12345678901234567890123456789012"
-   ```
-
-### Issue: Tests Timeout
-
-**Symptoms:**
-```
-pytest timeout exceeded
-```
-
-**Solutions:**
-1. Increase timeout:
-   ```bash
-   # In test file or pytest.ini
-   timeout = 60
-   ```
-
-2. Check for slow providers:
-   ```bash
-   curl http://localhost:5001/api/v1/health/providers
-   ```
-
-3. Verify Ollama is responding:
-   ```bash
-   curl http://localhost:11434/api/tags
-   ```
-
-### Issue: Conversation Not Found in Search
-
-**Symptoms:**
-```
-AssertionError: Conversation not found in search results
-```
-
-**Solutions:**
-1. Wait longer for embedding:
+1. **Use the shared fixtures** from `conftest.py`:
    ```python
-   await asyncio.sleep(5)  # Increase from 2
+   @pytest.mark.e2e
+   @pytest.mark.asyncio
+   async def test_my_feature(async_client, api_headers):
+       # Test automatically skips if server unavailable
+       response = await async_client.get("/endpoint", headers=api_headers)
+       assert response.status_code == 200
    ```
 
-2. Check ChromaDB:
-   ```bash
-   curl http://localhost:8000/api/v1/collections
+2. **Mark appropriately:**
+   ```python
+   @pytest.mark.e2e        # For all E2E tests
+   @pytest.mark.slow       # For tests > 5 seconds
+   @pytest.mark.asyncio    # For async tests
    ```
 
-3. Verify embedding service:
-   ```bash
-   docker-compose logs bridge | grep "embed"
+3. **Handle provider variability:**
+   ```python
+   # Don't assume specific providers
+   if response.status_code == 200:
+       # Test passed with available provider
+   else:
+       # Gracefully handle provider unavailability
+       pytest.skip("Provider not available")
    ```
 
-### Issue: Circuit Breaker Always Open
-
-**Symptoms:**
-```
-All providers showing circuit breaker: open
-```
-
-**Solutions:**
-1. Check provider health:
-   ```bash
-   curl http://localhost:11434/api/tags
-   curl https://api.openai.com/v1/models -H "Authorization: Bearer $OPENAI_API_KEY"
+4. **Clean up resources:**
+   ```python
+   # Use fixtures or context managers
+   try:
+       # Create test resources
+       pass
+   finally:
+       # Clean up (if applicable)
+       pass
    ```
-
-2. Reset circuit breakers:
-   ```bash
-   docker-compose restart bridge
-   ```
-
-3. Adjust thresholds in config:
-   ```yaml
-   circuit_breaker:
-     failure_threshold: 10  # More tolerant
-     reset_timeout: 30      # Faster recovery
-   ```
-
-## Performance Benchmarks
-
-### Expected Test Duration
-
-| Test | Duration | Notes |
-|------|----------|-------|
-| `test_full_conversation_flow` | 3-5s | Includes 2s sleep for embedding |
-| `test_multi_dimension_workflow` | 3-4s | Single conversation |
-| `test_cost_tracking_workflow` | 1-2s | Metadata only |
-| `test_search_ranking_quality` | 5-8s | Creates 3 conversations |
-| `test_concurrent_operations` | 2-3s | 5 parallel requests |
-| `test_provider_fallback` | 2-3s | Multiple routing checks |
-| `test_circuit_breaker_behavior` | 3-5s | Multiple health checks |
-| `test_graceful_degradation` | 1-2s | Error path testing |
-| `test_data_consistency_during_failures` | 4-6s | Full CRUD cycle |
-| `test_timeout_handling` | 1-2s | Fast metadata check |
-
-**Total:** ~30-40 seconds for full E2E suite
-
-### Resource Usage
-
-During test execution:
-- **CPU**: 20-40% (Ollama during embedding)
-- **Memory**: 2-4 GB (Ollama + services)
-- **Disk I/O**: Moderate (ChromaDB writes)
-- **Network**: Minimal (local services)
-
-## CI/CD Integration
-
-### GitHub Actions
-
-```yaml
-name: E2E Tests
-
-on: [push, pull_request]
-
-jobs:
-  e2e:
-    runs-on: ubuntu-latest
-    
-    steps:
-      - uses: actions/checkout@v3
-      
-      - name: Start Sekha Stack
-        run: |
-          cd sekha-docker
-          docker-compose -f docker-compose.v2.yml up -d
-          sleep 30  # Wait for services
-      
-      - name: Run E2E Tests
-        env:
-          SEKHA_CONTROLLER_URL: http://localhost:8080
-          SEKHA_BRIDGE_URL: http://localhost:5001
-          SEKHA_API_KEY: test_key_12345678901234567890123456789012
-        run: |
-          cd sekha-llm-bridge
-          pytest tests/e2e/ -v -m e2e
-      
-      - name: Collect Logs on Failure
-        if: failure()
-        run: |
-          docker-compose -f sekha-docker/docker-compose.v2.yml logs
-```
-
-## Contributing
-
-When adding new E2E tests:
-
-1. **Use descriptive names**: `test_feature_scenario`
-2. **Add docstrings**: Explain what the test verifies
-3. **Use markers**: `@pytest.mark.e2e` and `@pytest.mark.slow` if needed
-4. **Include assertions**: Clear failure messages
-5. **Clean up**: Delete test data if possible
-6. **Document**: Update this README
 
 ## Related Documentation
 
-- [Module 4 README](../../docs/MODULE_4_README.md)
-- [E2E Testing Guide](../../../sekha-docker/docs/E2E_TESTING.md)
-- [Integration Tests](../integration/)
-- [Configuration Guide](../../../sekha-docker/docs/configuration-v2.md)
+- [Unit Tests](../unit/README.md) - Fast, isolated component tests
+- [Integration Tests](../integration/README.md) - Multi-component tests with mocking
+- [Test Strategy](../../docs/testing-strategy.md) - Overall testing approach
 
----
+## Questions?
 
-**Module 4 - Task 4.5 & 4.6**: E2E Happy Path and Failure & Recovery Tests  
-**Status**: ✅ Complete
+If you encounter issues not covered here, check:
+1. Server logs: Look for startup errors or provider connection issues
+2. Test output: Review the `-s` flag output for diagnostic information
+3. Health endpoint: `curl http://localhost:8000/api/v1/health/providers`
