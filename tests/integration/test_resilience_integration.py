@@ -192,9 +192,7 @@ class TestCircuitBreakerStateTransitions:
 
     def test_circuit_breaker_closes_after_half_open_successes(self):
         """Test circuit breaker closes after successes in half-open."""
-        cb = CircuitBreaker(
-            failure_threshold=2, timeout_secs=0, success_threshold=2
-        )
+        cb = CircuitBreaker(failure_threshold=2, timeout_secs=0, success_threshold=2)
 
         # Open the circuit
         cb.record_failure(Exception("Error 1"))
