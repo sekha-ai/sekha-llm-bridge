@@ -133,7 +133,6 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
     services:
-      # Only Redis as service (Chroma needs volumes, run as container)
       redis:
         image: redis:7-alpine
         ports:
@@ -166,22 +165,21 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       # ============================================
-      # Step 1: Start Chroma (with proper config from docker-compose)
+      # Infrastructure: Start with v0.1.0 config (working version)
       # ============================================
-      - name: Start Chroma
+      - name: Start Chroma (v0.1.0 config - named volume, no env vars)
         run: |
-          echo "🗄️ Starting Chroma DB..."
+          echo "🗄️ Starting Chroma DB with v0.1.0 configuration..."
           
-          # Create data directory
-          mkdir -p ${{ runner.temp }}/chroma-data
+          # Create named volume (faster than bind mount for ChromaDB)
+          docker volume create chroma-data
           
-          # Start Chroma with proper configuration from docker-compose.prod.yml
+          # Start Chroma WITHOUT environment variables (they break persistence path)
+          # Use named volume at /chroma/chroma (v0.1.0 path)
           docker run -d \
             --name chroma \
             -p 8000:8000 \
-            -v ${{ runner.temp }}/chroma-data:/chroma/chroma \
-            -e IS_PERSISTENT=TRUE \
-            -e ANONYMIZED_TELEMETRY=FALSE \
+            -v chroma-data:/chroma/chroma \
             chromadb/chroma:latest
           
           echo "⏳ Waiting for Chroma to be ready..."
@@ -198,13 +196,7 @@ jobs:
             fi
             sleep 2
           done
-          
-          echo "📊 Chroma version:"
-          curl -s http://localhost:8000/api/v1/version || echo "Version endpoint not available"
 
-      # ============================================
-      # Step 2: Start Ollama (required by bridge)
-      # ============================================
       - name: Start Ollama
         run: |
           echo "🚀 Starting Ollama..."
@@ -371,6 +363,9 @@ jobs:
           docker rm chroma 2>/dev/null || true
           docker stop ollama 2>/dev/null || true
           docker rm ollama 2>/dev/null || true
+          
+          echo "Cleaning up Docker volumes"
+          docker volume rm chroma-data 2>/dev/null || true
           
           echo "✅ Cleanup complete"
 
