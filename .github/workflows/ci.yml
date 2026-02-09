@@ -165,21 +165,25 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       # ============================================
-      # Infrastructure: Matching merged prod.yml config
+      # EXACT production configuration
       # ============================================
-      - name: Start Chroma (prod.yml config - named volume, no env vars)
+      - name: Start Chroma (EXACT prod.yml config)
         run: |
-          echo "🗄️ Starting Chroma DB (production config)..."
+          echo "🗄️ Starting Chroma DB (PRODUCTION CONFIG)..."
           
-          # Create named volume (required for /chroma/chroma path)
-          docker volume create chroma-data
+          # Create directory for bind mount
+          mkdir -p ${{ runner.temp }}/chroma-data
           
-          # Start Chroma with NO environment variables (matches prod.yml)
-          # Use named volume at /chroma/chroma (production path)
+          # EXACT prod.yml config:
+          # - Bind mount ./chroma-data:/data
+          # - IS_PERSISTENT=TRUE
+          # - ANONYMIZED_TELEMETRY=FALSE
           docker run -d \
             --name chroma \
             -p 8000:8000 \
-            -v chroma-data:/chroma/chroma \
+            -v ${{ runner.temp }}/chroma-data:/data \
+            -e IS_PERSISTENT=TRUE \
+            -e ANONYMIZED_TELEMETRY=FALSE \
             chromadb/chroma:latest
           
           echo "⏳ Waiting for Chroma to be ready..."
@@ -197,8 +201,9 @@ jobs:
             sleep 2
           done
           
-          echo "📊 Chroma heartbeat:"
+          echo "📊 Chroma status:"
           curl -s http://localhost:8000/api/v1/heartbeat || echo "Heartbeat failed"
+          docker exec chroma ls -la /data || echo "Can't list /data"
 
       - name: Start Ollama
         run: |
@@ -228,14 +233,16 @@ jobs:
           echo "✅ Models ready"
 
       # ============================================
-      # Step 3: Start LLM Bridge (prod.yml config)
+      # LLM Bridge with v0.2.0 env vars
       # ============================================
       - name: Install and start LLM Bridge
         working-directory: llm-bridge
         env:
+          # v0.2.0 env vars
           HOST: 0.0.0.0
           PORT: 5001
           LOG_LEVEL: info
+          # Original env vars
           OLLAMA_BASE_URL: http://localhost:11434
           REDIS_URL: redis://localhost:6379/0
         run: |
@@ -244,7 +251,7 @@ jobs:
           pip install -r requirements.txt
           pip install -e .
           
-          echo "🚀 Starting LLM Bridge (production config)..."
+          echo "🚀 Starting LLM Bridge (v0.2.0 config)..."
           python -m sekha_llm_bridge.main > ${{ runner.temp }}/bridge.log 2>&1 &
           BRIDGE_PID=$!
           echo "BRIDGE_PID=$BRIDGE_PID" >> $GITHUB_ENV
@@ -273,7 +280,7 @@ jobs:
           curl -s http://localhost:5001/health | python -m json.tool || true
 
       # ============================================
-      # Step 4: Build and Start Controller (prod.yml config)
+      # Controller
       # ============================================
       - name: Build controller
         working-directory: controller
@@ -331,7 +338,7 @@ jobs:
           curl -s http://localhost:8080/health | python -c "import sys, json; print(json.dumps(json.load(sys.stdin), indent=2))" || true
 
       # ============================================
-      # Step 5: Run Integration Tests
+      # Run Integration Tests
       # ============================================
       - name: Run integration tests
         working-directory: llm-bridge
@@ -366,9 +373,6 @@ jobs:
           docker rm chroma 2>/dev/null || true
           docker stop ollama 2>/dev/null || true
           docker rm ollama 2>/dev/null || true
-          
-          echo "Cleaning up Docker volumes"
-          docker volume rm chroma-data 2>/dev/null || true
           
           echo "✅ Cleanup complete"
 
