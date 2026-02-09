@@ -1,5 +1,4 @@
-"""
-E2E Test: Resilience and Failure Recovery
+"""E2E Test: Resilience and Failure Recovery
 
 Tests system behavior under real-world conditions:
 1. Check multiple providers (primary + fallback)
@@ -8,6 +7,10 @@ Tests system behavior under real-world conditions:
 4. Verify graceful degradation
 5. Test data consistency during provider instability
 6. Verify timeout handling
+
+Note: These tests require a running sekha-llm-bridge server.
+      They will be automatically skipped if no server is detected.
+      See tests/e2e/conftest.py for configuration.
 
 Module 4 - Task 4.6: E2E Resilience & Recovery
 
@@ -28,8 +31,6 @@ BRIDGE_URL = os.getenv("SEKHA_BRIDGE_URL", "http://localhost:5001")
 CONTROLLER_URL = os.getenv("SEKHA_CONTROLLER_URL", "http://localhost:8080")
 API_KEY = os.getenv("SEKHA_API_KEY", "test_key_12345678901234567890123456789012")
 
-TIMEOUT = 30.0
-
 
 @pytest.fixture
 def api_headers():
@@ -38,13 +39,6 @@ def api_headers():
         "X-API-Key": API_KEY,
         "Content-Type": "application/json",
     }
-
-
-@pytest.fixture
-async def async_client():
-    """Async HTTP client"""
-    async with httpx.AsyncClient(timeout=TIMEOUT) as client:
-        yield client
 
 
 @pytest.mark.e2e
@@ -407,5 +401,5 @@ async def test_timeout_handling(async_client, api_headers):
 
 
 if __name__ == "__main__":
-    # Run with: pytest tests/e2e/test_resilience.py -v -m e2e -s
-    pytest.main([__file__, "-v", "-m", "e2e", "-s"])
+    # Run with: pytest tests/e2e/test_resilience.py -v -s
+    pytest.main([__file__, "-v", "-s"])
