@@ -165,24 +165,26 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       # ============================================
-      # EXACT production configuration
+      # EXACT production configuration + PERSIST_DIRECTORY fix
       # ============================================
-      - name: Start Chroma (EXACT prod.yml config)
+      - name: Start Chroma (prod.yml config with PERSIST_DIRECTORY)
         run: |
           echo "🗄️ Starting Chroma DB (PRODUCTION CONFIG)..."
           
           # Create directory for bind mount
           mkdir -p ${{ runner.temp }}/chroma-data
           
-          # EXACT prod.yml config:
+          # EXACT prod.yml config + PERSIST_DIRECTORY fix:
           # - Bind mount ./chroma-data:/data
           # - IS_PERSISTENT=TRUE
+          # - PERSIST_DIRECTORY=/data (REQUIRED to match mount!)
           # - ANONYMIZED_TELEMETRY=FALSE
           docker run -d \
             --name chroma \
             -p 8000:8000 \
             -v ${{ runner.temp }}/chroma-data:/data \
             -e IS_PERSISTENT=TRUE \
+            -e PERSIST_DIRECTORY=/data \
             -e ANONYMIZED_TELEMETRY=FALSE \
             chromadb/chroma:latest
           
