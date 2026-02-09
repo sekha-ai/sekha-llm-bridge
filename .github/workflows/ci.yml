@@ -165,18 +165,21 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       # ============================================
-      # Infrastructure: Chroma with correct path
+      # Infrastructure: Matching merged prod.yml config
       # ============================================
-      - name: Start Chroma
+      - name: Start Chroma (prod.yml config - named volume, no env vars)
         run: |
-          echo "🗄️ Starting Chroma DB..."
+          echo "🗄️ Starting Chroma DB (production config)..."
           
-          # Chroma's default persist_path is /data (as seen in logs)
-          # Mount volume at /data to match Chroma's expectation
+          # Create named volume (required for /chroma/chroma path)
+          docker volume create chroma-data
+          
+          # Start Chroma with NO environment variables (matches prod.yml)
+          # Use named volume at /chroma/chroma (production path)
           docker run -d \
             --name chroma \
             -p 8000:8000 \
-            -v ${{ runner.temp }}/chroma-data:/data \
+            -v chroma-data:/chroma/chroma \
             chromadb/chroma:latest
           
           echo "⏳ Waiting for Chroma to be ready..."
@@ -194,8 +197,8 @@ jobs:
             sleep 2
           done
           
-          echo "📊 Chroma version and config:"
-          curl -s http://localhost:8000/api/v1/version || echo "Version endpoint not available"
+          echo "📊 Chroma heartbeat:"
+          curl -s http://localhost:8000/api/v1/heartbeat || echo "Heartbeat failed"
 
       - name: Start Ollama
         run: |
@@ -225,23 +228,23 @@ jobs:
           echo "✅ Models ready"
 
       # ============================================
-      # Step 3: Start LLM Bridge (depends on Redis + Ollama)
+      # Step 3: Start LLM Bridge (prod.yml config)
       # ============================================
       - name: Install and start LLM Bridge
         working-directory: llm-bridge
         env:
-          OLLAMA_BASE_URL: http://localhost:11434
-          REDIS_URL: redis://localhost:6379/0
           HOST: 0.0.0.0
           PORT: 5001
           LOG_LEVEL: info
+          OLLAMA_BASE_URL: http://localhost:11434
+          REDIS_URL: redis://localhost:6379/0
         run: |
           echo "📦 Installing LLM Bridge dependencies..."
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install -e .
           
-          echo "🚀 Starting LLM Bridge..."
+          echo "🚀 Starting LLM Bridge (production config)..."
           python -m sekha_llm_bridge.main > ${{ runner.temp }}/bridge.log 2>&1 &
           BRIDGE_PID=$!
           echo "BRIDGE_PID=$BRIDGE_PID" >> $GITHUB_ENV
@@ -270,7 +273,7 @@ jobs:
           curl -s http://localhost:5001/health | python -m json.tool || true
 
       # ============================================
-      # Step 4: Build and Start Controller (depends on all above)
+      # Step 4: Build and Start Controller (prod.yml config)
       # ============================================
       - name: Build controller
         working-directory: controller
@@ -281,14 +284,14 @@ jobs:
       - name: Start controller
         working-directory: controller
         env:
-          SEKHA_SERVER_HOST: 0.0.0.0
-          SEKHA_SERVER_PORT: 8080
-          SEKHA_DATABASE_URL: sqlite://${{ runner.temp }}/sekha-data/sekha.db
-          SEKHA_CHROMA_URL: http://localhost:8000
-          SEKHA_LLM_BRIDGE_URL: http://localhost:5001
-          SEKHA_MCP_API_KEY: test-token-123-456-789-012345678901234
-          SEKHA_REST_API_KEY: test-token-123
-          SEKHA_LOG_LEVEL: info
+          SEKHA__SERVER_HOST: 0.0.0.0
+          SEKHA__SERVER_PORT: 8080
+          SEKHA__DATABASE_URL: sqlite://${{ runner.temp }}/sekha-data/sekha.db
+          SEKHA__CHROMA_URL: http://localhost:8000
+          SEKHA__LLM_BRIDGE_URL: http://localhost:5001
+          SEKHA__MCP_API_KEY: test-token-123-456-789-012345678901234
+          SEKHA__REST_API_KEY: test-token-123
+          SEKHA__LOG_LEVEL: info
           REDIS_HOST: redis://localhost:6379/0
         run: |
           echo "📂 Creating database directory..."
@@ -363,6 +366,9 @@ jobs:
           docker rm chroma 2>/dev/null || true
           docker stop ollama 2>/dev/null || true
           docker rm ollama 2>/dev/null || true
+          
+          echo "Cleaning up Docker volumes"
+          docker volume rm chroma-data 2>/dev/null || true
           
           echo "✅ Cleanup complete"
 
