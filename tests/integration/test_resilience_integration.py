@@ -232,7 +232,8 @@ class TestCircuitBreakerStateTransitions:
 
         # Failure in half-open immediately reopens
         cb.record_failure(Exception("Error 3"))
-        assert cb.get_state() == CircuitState.OPEN
+        # Use direct state check to avoid re-triggering transition with timeout=0
+        assert cb.state == CircuitState.OPEN
 
     def test_circuit_breaker_resets_failure_count_on_success(self):
         """Test failure count resets on success in closed state."""
