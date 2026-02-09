@@ -1,22 +1,24 @@
 """
 E2E Test: Resilience and Failure Recovery
 
-Tests system behavior under failure conditions:
-1. Configure multiple providers (primary + fallback)
-2. Simulate primary provider failure
-3. Verify automatic fallback to secondary
-4. Verify circuit breaker opens for failed provider
-5. Restore primary provider
-6. Verify circuit breaker closes and recovery
+Tests system behavior under real-world conditions:
+1. Check multiple providers (primary + fallback)
+2. Observe cost-based fallback behavior
+3. Monitor circuit breaker states
+4. Verify graceful degradation
+5. Test data consistency during provider instability
+6. Verify timeout handling
 
-Module 4 - Task 4.6: E2E Failure & Recovery
+Module 4 - Task 4.6: E2E Resilience & Recovery
+
+Note: These are TRUE E2E tests - they observe real system behavior
+without injecting failures. For controlled failure injection,
+see tests/integration/test_resilience_integration.py
 """
 
 import asyncio
 import os
 import time
-from typing import Any, Dict
-from unittest.mock import MagicMock, patch
 
 import httpx
 import pytest
@@ -52,12 +54,12 @@ async def test_provider_fallback(async_client, api_headers):
     """
     E2E Test: Automatic provider fallback
 
-    Scenario:
+    Observes real fallback behavior:
     1. Check initial provider health
     2. Request routing for a task
     3. Verify fallback providers exist
-    4. Simulate provider unavailability
-    5. Verify request still succeeds via fallback
+    4. Test cost-based fallback
+    5. Verify request succeeds via fallback when needed
     """
 
     print("\n🔄 Testing provider fallback...")
@@ -130,15 +132,13 @@ async def test_provider_fallback(async_client, api_headers):
 @pytest.mark.asyncio
 async def test_circuit_breaker_behavior(async_client, api_headers):
     """
-    E2E Test: Circuit breaker opening and recovery
+    E2E Test: Circuit breaker observation
 
-    Scenario:
+    Observes circuit breaker states in real system:
     1. Monitor circuit breaker states
-    2. Simulate multiple failures (if possible)
-    3. Verify circuit breaker opens
-    4. Wait for timeout
-    5. Verify circuit breaker attempts recovery (half-open)
-    6. Verify full recovery (closed)
+    2. Make multiple requests
+    3. Verify circuit breakers respond correctly
+    4. Check state consistency
     """
 
     print("\n⚡ Testing circuit breaker behavior...")
@@ -172,7 +172,7 @@ async def test_circuit_breaker_behavior(async_client, api_headers):
 
     # Make multiple routing requests to ensure providers are exercised
     for i in range(3):
-        routing_request = {"task": "chat", "preferred_model": None}
+        routing_request = {"task": "chat_small", "preferred_model": None}
 
         response = await async_client.post(
             f"{BRIDGE_URL}/api/v1/route", json=routing_request, headers=api_headers
@@ -187,7 +187,7 @@ async def test_circuit_breaker_behavior(async_client, api_headers):
         await asyncio.sleep(0.5)
 
     # Step 3: Check if any circuit breakers changed state
-    print("\n🟡 Step 3: Checking for state changes...")
+    print("\n🟪 Step 3: Checking for state changes...")
     response = await async_client.get(
         f"{BRIDGE_URL}/api/v1/health/providers", headers=api_headers
     )
@@ -217,13 +217,13 @@ async def test_circuit_breaker_behavior(async_client, api_headers):
 @pytest.mark.asyncio
 async def test_graceful_degradation(async_client, api_headers):
     """
-    E2E Test: Graceful degradation under provider failures
+    E2E Test: Graceful degradation under constraints
 
-    Scenario:
-    1. Request operation with all providers potentially down
+    Tests system behavior with impossible constraints:
+    1. Request operation with constraints no provider can satisfy
     2. Verify error messages are informative
     3. Verify no crashes or hangs
-    4. Verify system recovers when providers return
+    4. Verify system recovers with valid requests
     """
 
     print("\n🛡️ Testing graceful degradation...")
@@ -232,7 +232,7 @@ async def test_graceful_degradation(async_client, api_headers):
     print("\n❌ Step 1: Testing with impossible constraints...")
 
     routing_request = {
-        "task": "chat",
+        "task": "chat_smart",
         "max_cost": 0.0,  # Impossible: $0 for paid models
         "preferred_model": "nonexistent-model-xyz",
     }
@@ -275,7 +275,7 @@ async def test_graceful_degradation(async_client, api_headers):
         print(f"✅ System recovered: {routing.get('provider_id')}")
     else:
         # If all providers are actually down, this is acceptable
-        print(f"⚠️  All providers unavailable (acceptable in test environment)")
+        print("⚠️  All providers unavailable (acceptable in test environment)")
 
     print("✅ Graceful degradation test PASSED")
 
@@ -285,12 +285,12 @@ async def test_graceful_degradation(async_client, api_headers):
 @pytest.mark.asyncio
 async def test_data_consistency_during_failures(async_client, api_headers):
     """
-    E2E Test: Data consistency during provider failures
+    E2E Test: Data consistency observation
 
-    Scenario:
+    Tests data consistency in real system:
     1. Create conversation during normal operation
-    2. Simulate provider instability
-    3. Try to search for conversation
+    2. Retrieve conversation (works regardless of provider state)
+    3. Search for conversation
     4. Verify no data loss or corruption
     """
 
@@ -368,7 +368,7 @@ async def test_timeout_handling(async_client, api_headers):
     """
     E2E Test: Timeout handling
 
-    Verifies system handles slow/hanging providers gracefully.
+    Verifies system handles operations within reasonable time.
     """
 
     print("\n⏱️ Testing timeout handling...")
