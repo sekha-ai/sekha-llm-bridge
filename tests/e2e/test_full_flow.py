@@ -1,5 +1,4 @@
-"""
-E2E Test: Full Conversation Flow
+"""E2E Test: Full Conversation Flow
 
 Tests the complete lifecycle of a conversation through Sekha:
 1. Store conversation via controller
@@ -9,6 +8,10 @@ Tests the complete lifecycle of a conversation through Sekha:
 5. Generate summary
 6. Verify all used optimal models
 
+Note: These tests require a running sekha-llm-bridge server.
+      They will be automatically skipped if no server is detected.
+      See tests/e2e/conftest.py for configuration.
+
 Module 4 - Task 4.5: E2E Happy Path
 """
 
@@ -16,15 +19,12 @@ import asyncio
 import os
 import uuid
 
-import httpx
 import pytest
 
 # Test configuration
 CONTROLLER_URL = os.getenv("SEKHA_CONTROLLER_URL", "http://localhost:8080")
 BRIDGE_URL = os.getenv("SEKHA_BRIDGE_URL", "http://localhost:5001")
 API_KEY = os.getenv("SEKHA_API_KEY", "test_key_12345678901234567890123456789012")
-
-TIMEOUT = 30.0  # seconds
 
 
 @pytest.fixture
@@ -34,13 +34,6 @@ def api_headers():
         "X-API-Key": API_KEY,
         "Content-Type": "application/json",
     }
-
-
-@pytest.fixture
-async def async_client():
-    """Async HTTP client"""
-    async with httpx.AsyncClient(timeout=TIMEOUT) as client:
-        yield client
 
 
 @pytest.mark.e2e
@@ -355,5 +348,5 @@ async def test_concurrent_operations(async_client, api_headers):
 
 
 if __name__ == "__main__":
-    # Run with: pytest tests/e2e/test_full_flow.py -v -m e2e -s
-    pytest.main([__file__, "-v", "-m", "e2e", "-s"])
+    # Run with: pytest tests/e2e/test_full_flow.py -v -s
+    pytest.main([__file__, "-v", "-s"])
