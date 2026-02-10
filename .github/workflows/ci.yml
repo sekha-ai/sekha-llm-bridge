@@ -132,7 +132,6 @@ jobs:
     needs: test
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
-    # COPY EXACT SERVICES FROM CONTROLLER CI
     services:
       chroma:
         image: chromadb/chroma:0.4.24
@@ -233,12 +232,16 @@ jobs:
         working-directory: controller
         run: cargo build --release --bin sekha-controller
 
-      # USE EXACT ENV VARS FROM CONTROLLER CI (NO DATABASE_URL = uses default)
+      - name: Create data directory for controller
+        working-directory: controller
+        run: mkdir -p data
+
       - name: Start controller
         working-directory: controller
         env:
           SEKHA__SERVER_HOST: 0.0.0.0
           SEKHA__SERVER_PORT: 8080
+          SEKHA__DATABASE_URL: sqlite:///home/runner/work/sekha-llm-bridge/sekha-llm-bridge/controller/data/sekha.db
           SEKHA__CHROMA_URL: http://localhost:8000
           SEKHA__LLM_BRIDGE_URL: http://localhost:5001
           SEKHA__MCP_API_KEY: test-token-123-456-789-012345678901234
@@ -261,6 +264,9 @@ jobs:
               echo ""
               echo "📋 Controller logs:"
               cat ${{ runner.temp }}/controller.log || true
+              echo ""
+              echo "📋 Data directory contents:"
+              ls -la data/
               exit 1
             fi
             sleep 1
