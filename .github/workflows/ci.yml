@@ -36,7 +36,7 @@ jobs:
           path: ~/.cache/pip
           key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
           restore-keys: |
-            ${{ runner.os }}-pip-
+            ${{ runner.os}}-pip-
 
       - name: Install dependencies
         run: |
@@ -237,10 +237,10 @@ jobs:
         run: |
           mkdir -p data
           
-          # Create v2.0 config.toml with llm_providers to prevent auto-migration
+          # Create v0.2.0 config.toml with llm_providers to prevent auto-migration
           cat > config.toml << 'EOF'
-          # Sekha CI Configuration - v2.0 format
-          config_version = "2.0"
+          # Sekha CI Configuration - v0.2.0 format
+          config_version = "v0.2.0"
           
           server_host = "0.0.0.0"
           server_port = 8080
@@ -259,7 +259,7 @@ jobs:
           rate_limit_per_minute = 1000
           cors_enabled = true
           
-          # V2.0 provider configuration to prevent auto-migration
+          # V0.2.0 provider configuration to prevent auto-migration
           [[llm_providers]]
           id = "ollama_ci"
           type = "ollama"
@@ -289,7 +289,7 @@ jobs:
           chat_smart = "llama3.1:8b"
           EOF
           
-          echo "✅ Created v2.0 config.toml"
+          echo "✅ Created v0.2.0 config.toml"
           cat config.toml
 
       - name: Start controller
@@ -297,7 +297,7 @@ jobs:
         env:
           RUST_LOG: info
         run: |
-          echo "🚀 Starting controller with v2.0 config..."
+          echo "🚀 Starting controller with v0.2.0 config..."
           ./target/release/sekha-controller > ${{ runner.temp }}/controller.log 2>&1 &
           CONTROLLER_PID=$!
           echo "CONTROLLER_PID=$CONTROLLER_PID" >> $GITHUB_ENV
