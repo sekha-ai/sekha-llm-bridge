@@ -284,7 +284,7 @@ jobs:
           curl -s http://localhost:5001/health | python -m json.tool || true
 
       # ============================================
-      # Controller
+      # Controller - Use correct env vars
       # ============================================
       - name: Build controller
         working-directory: controller
@@ -295,6 +295,7 @@ jobs:
       - name: Start controller
         working-directory: controller
         env:
+          # Controller env vars (NO REDIS_HOST - controller doesn't use Redis)
           SEKHA__SERVER_HOST: 0.0.0.0
           SEKHA__SERVER_PORT: 8080
           SEKHA__DATABASE_URL: sqlite://${{ runner.temp }}/sekha-data/sekha.db
@@ -303,7 +304,6 @@ jobs:
           SEKHA__MCP_API_KEY: test-token-123-456-789-012345678901234
           SEKHA__REST_API_KEY: test-token-123
           SEKHA__LOG_LEVEL: info
-          REDIS_HOST: redis://localhost:6379/0
         run: |
           echo "📂 Creating database directory..."
           mkdir -p ${{ runner.temp }}/sekha-data
