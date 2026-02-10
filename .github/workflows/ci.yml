@@ -236,7 +236,7 @@ jobs:
           echo "✅ Models ready"
 
       # ============================================
-      # LLM Bridge with v0.2.0 env vars
+      # LLM Bridge - Use correct uvicorn command
       # ============================================
       - name: Install and start LLM Bridge
         working-directory: llm-bridge
@@ -254,8 +254,9 @@ jobs:
           pip install -r requirements.txt
           pip install -e .
           
-          echo "🚀 Starting LLM Bridge (v0.2.0 config)..."
-          python -m sekha_llm_bridge.main > ${{ runner.temp }}/bridge.log 2>&1 &
+          echo "🚀 Starting LLM Bridge (using uvicorn command from Dockerfile)..."
+          # Use exact command from Dockerfile
+          uvicorn sekha_llm_bridge.main:app --host 0.0.0.0 --port 5001 > ${{ runner.temp }}/bridge.log 2>&1 &
           BRIDGE_PID=$!
           echo "BRIDGE_PID=$BRIDGE_PID" >> $GITHUB_ENV
           
