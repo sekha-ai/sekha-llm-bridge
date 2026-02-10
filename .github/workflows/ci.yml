@@ -132,7 +132,12 @@ jobs:
     needs: test
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
+    # COPY EXACT SERVICES FROM CONTROLLER CI
     services:
+      chroma:
+        image: chromadb/chroma:0.4.24
+        ports:
+          - 8000:8000
       redis:
         image: redis:7-alpine
         ports:
@@ -164,50 +169,6 @@ jobs:
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
 
-      # ============================================
-      # Chroma v0.4.24 (NOT broken :latest tag)
-      # ============================================
-      - name: Start Chroma (v0.4.24 stable)
-        run: |
-          echo "🗄️ Starting Chroma DB v0.4.24..."
-          
-          # Create directory for default Chroma mount point
-          mkdir -p ${{ runner.temp }}/chroma-data
-          
-          # Use v0.4.24 (last stable before :latest broke)
-          # Use default Chroma mount path: /chroma/chroma
-          docker run -d \
-            --name chroma \
-            -p 8000:8000 \
-            -v ${{ runner.temp }}/chroma-data:/chroma/chroma \
-            -e IS_PERSISTENT=TRUE \
-            -e ANONYMIZED_TELEMETRY=FALSE \
-            chromadb/chroma:0.4.24
-          
-          echo "⏳ Waiting for Chroma to start..."
-          sleep 10
-          
-          echo "⏳ Waiting for HTTP API..."
-          for i in {1..30}; do
-            if curl -sf http://localhost:8000/api/v1/heartbeat > /dev/null 2>&1; then
-              echo "✅ Chroma is ready (attempt $i/30)"
-              break
-            fi
-            if [ $i -eq 30 ]; then
-              echo "❌ Chroma timeout"
-              echo "📋 Chroma logs:"
-              docker logs chroma
-              echo "📋 Container status:"
-              docker ps -a | grep chroma
-              exit 1
-            fi
-            sleep 2
-          done
-          
-          echo "📊 Chroma status:"
-          docker logs chroma 2>&1 | tail -20
-          curl -s http://localhost:8000/api/v1/heartbeat | python -m json.tool || echo "Heartbeat failed"
-
       - name: Start Ollama
         run: |
           echo "🚀 Starting Ollama..."
@@ -235,17 +196,12 @@ jobs:
           docker exec ollama ollama pull nomic-embed-text:latest
           echo "✅ Models ready"
 
-      # ============================================
-      # LLM Bridge - Use correct uvicorn command
-      # ============================================
       - name: Install and start LLM Bridge
         working-directory: llm-bridge
         env:
-          # v0.2.0 env vars
           HOST: 0.0.0.0
           PORT: 5001
           LOG_LEVEL: info
-          # Original env vars
           OLLAMA_BASE_URL: http://localhost:11434
           REDIS_URL: redis://localhost:6379/0
         run: |
@@ -254,8 +210,7 @@ jobs:
           pip install -r requirements.txt
           pip install -e .
           
-          echo "🚀 Starting LLM Bridge (using uvicorn command from Dockerfile)..."
-          # Use exact command from Dockerfile
+          echo "🚀 Starting LLM Bridge..."
           uvicorn sekha_llm_bridge.main:app --host 0.0.0.0 --port 5001 > ${{ runner.temp }}/bridge.log 2>&1 &
           BRIDGE_PID=$!
           echo "BRIDGE_PID=$BRIDGE_PID" >> $GITHUB_ENV
@@ -268,51 +223,30 @@ jobs:
             fi
             if [ $i -eq 60 ]; then
               echo "❌ LLM Bridge health check timeout"
-              echo "📋 Bridge logs:"
               cat ${{ runner.temp }}/bridge.log || true
-              echo "📋 Bridge process status:"
-              ps aux | grep -E 'sekha_llm_bridge|PID' || true
               exit 1
-            fi
-            if [ $((i % 10)) -eq 0 ]; then
-              echo "⏳ Still waiting for bridge... ($i/60)"
             fi
             sleep 1
           done
-          
-          echo "📊 Testing bridge health endpoint:"
-          curl -s http://localhost:5001/health | python -m json.tool || true
 
-      # ============================================
-      # Controller - Check actual database connection error
-      # ============================================
       - name: Build controller
         working-directory: controller
-        run: |
-          echo "🔨 Building controller..."
-          cargo build --release --bin sekha-controller
+        run: cargo build --release --bin sekha-controller
 
+      # USE EXACT ENV VARS FROM CONTROLLER CI (NO DATABASE_URL = uses default)
       - name: Start controller
         working-directory: controller
         env:
-          # Controller env vars (no Redis - controller doesn't use it)
           SEKHA__SERVER_HOST: 0.0.0.0
           SEKHA__SERVER_PORT: 8080
-          SEKHA__DATABASE_URL: sqlite:///home/runner/work/_temp/sekha-data/sekha.db
           SEKHA__CHROMA_URL: http://localhost:8000
           SEKHA__LLM_BRIDGE_URL: http://localhost:5001
           SEKHA__MCP_API_KEY: test-token-123-456-789-012345678901234
           SEKHA__REST_API_KEY: test-token-123
-          SEKHA__LOG_LEVEL: debug
+          SEKHA__LOG_LEVEL: info
         run: |
-          echo "📂 Creating database directory..."
-          mkdir -p /home/runner/work/_temp/sekha-data
-          
-          echo "📂 Checking directory permissions..."
-          ls -la /home/runner/work/_temp/
-          
-          echo "🚀 Starting controller with debug logging..."
-          ./target/release/sekha-controller 2>&1 | tee ${{ runner.temp }}/controller.log &
+          echo "🚀 Starting controller..."
+          ./target/release/sekha-controller > ${{ runner.temp }}/controller.log 2>&1 &
           CONTROLLER_PID=$!
           echo "CONTROLLER_PID=$CONTROLLER_PID" >> $GITHUB_ENV
           
@@ -327,29 +261,11 @@ jobs:
               echo ""
               echo "📋 Controller logs:"
               cat ${{ runner.temp }}/controller.log || true
-              echo ""
-              echo "📋 Controller process status:"
-              ps aux | grep -E 'sekha-controller|PID' || true
-              echo ""
-              echo "📋 Port status:"
-              netstat -tlnp 2>/dev/null | grep -E '8080|5001|8000|6379' || ss -tlnp 2>/dev/null | grep -E '8080|5001|8000|6379' || true
               exit 1
-            fi
-            if [ $((i % 10)) -eq 0 ]; then
-              echo "⏳ Still waiting for controller... ($i/120)"
-              # Show real-time logs while waiting
-              echo "Latest logs:"
-              tail -5 ${{ runner.temp }}/controller.log 2>/dev/null || true
             fi
             sleep 1
           done
-          
-          echo "📊 Testing controller health endpoint:"
-          curl -s http://localhost:8080/health | python -c "import sys, json; print(json.dumps(json.load(sys.stdin), indent=2))" || true
 
-      # ============================================
-      # Run Integration Tests
-      # ============================================
       - name: Run integration tests
         working-directory: llm-bridge
         env:
@@ -360,27 +276,19 @@ jobs:
           echo "🧪 Running integration tests..."
           pytest tests/integration/ -v --tb=short
 
-      # ============================================
-      # Cleanup
-      # ============================================
       - name: Cleanup
         if: always()
         run: |
           echo "🧹 Cleaning up services..."
           
           if [ ! -z "$CONTROLLER_PID" ]; then
-            echo "Stopping controller (PID: $CONTROLLER_PID)"
             kill $CONTROLLER_PID 2>/dev/null || true
           fi
           
           if [ ! -z "$BRIDGE_PID" ]; then
-            echo "Stopping LLM bridge (PID: $BRIDGE_PID)"
             kill $BRIDGE_PID 2>/dev/null || true
           fi
           
-          echo "Stopping Docker containers"
-          docker stop chroma 2>/dev/null || true
-          docker rm chroma 2>/dev/null || true
           docker stop ollama 2>/dev/null || true
           docker rm ollama 2>/dev/null || true
           
