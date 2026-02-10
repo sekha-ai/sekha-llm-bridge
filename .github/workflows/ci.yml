@@ -232,30 +232,42 @@ jobs:
         working-directory: controller
         run: cargo build --release --bin sekha-controller
 
-      - name: Create data directory for controller
+      - name: Create controller data directory and config
         working-directory: controller
-        run: mkdir -p data
+        run: |
+          mkdir -p data
+          
+          # Create v2.0 config.toml to prevent auto-migration
+          cat > config.toml << 'EOF'
+          # Sekha CI Configuration - v2.0 format
+          
+          server_host = "0.0.0.0"
+          server_port = 8080
+          mcp_api_key = "test-token-123-456-789-012345678901234"
+          rest_api_key = "test-token-123"
+          database_url = "sqlite:///home/runner/work/sekha-llm-bridge/sekha-llm-bridge/controller/data/sekha.db"
+          ollama_url = "http://localhost:11434"
+          chroma_url = "http://localhost:8000"
+          llm_bridge_url = "http://localhost:5001"
+          embedding_model = "nomic-embed-text:latest"
+          max_connections = 10
+          log_level = "info"
+          summarization_enabled = true
+          summarization_model = "llama3.1:8b"
+          pruning_enabled = true
+          rate_limit_per_minute = 1000
+          cors_enabled = true
+          EOF
+          
+          echo "✅ Created v2.0 config.toml"
+          cat config.toml
 
       - name: Start controller
         working-directory: controller
         env:
-          # Match EXACT env vars from docker-compose.prod.yml
           RUST_LOG: info
-          SEKHA__SERVER_HOST: 0.0.0.0
-          SEKHA__SERVER_PORT: 8080
-          SEKHA__MCP_API_KEY: test-token-123-456-789-012345678901234
-          SEKHA__REST_API_KEY: test-token-123
-          SEKHA__DATABASE_URL: sqlite:///home/runner/work/sekha-llm-bridge/sekha-llm-bridge/controller/data/sekha.db
-          SEKHA__OLLAMA_URL: http://localhost:11434
-          SEKHA__CHROMA_URL: http://localhost:8000
-          SEKHA__LLM_BRIDGE_URL: http://localhost:5001
-          SEKHA__LOG_LEVEL: info
-          SEKHA__SUMMARIZATION_ENABLED: true
-          SEKHA__PRUNING_ENABLED: true
-          SEKHA__EMBEDDING_MODEL: nomic-embed-text:latest
-          SEKHA__SUMMARIZATION_MODEL: llama3.1:8b
         run: |
-          echo "🚀 Starting controller with complete env vars..."
+          echo "🚀 Starting controller with v2.0 config..."
           ./target/release/sekha-controller > ${{ runner.temp }}/controller.log 2>&1 &
           CONTROLLER_PID=$!
           echo "CONTROLLER_PID=$CONTROLLER_PID" >> $GITHUB_ENV
@@ -272,8 +284,11 @@ jobs:
               echo "📋 Controller logs:"
               cat ${{ runner.temp }}/controller.log || true
               echo ""
-              echo "📋 Data directory contents:"
-              ls -la data/
+              echo "📋 Config file:"
+              cat config.toml || true
+              echo ""
+              echo "📋 Data directory:"
+              ls -la data/ || true
               exit 1
             fi
             sleep 1
