@@ -165,45 +165,36 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       # ============================================
-      # EXACT production configuration + PERSIST_DIRECTORY fix
+      # Chroma v0.4.24 (NOT broken :latest tag)
       # ============================================
-      - name: Start Chroma (prod.yml config with PERSIST_DIRECTORY)
+      - name: Start Chroma (v0.4.24 stable)
         run: |
-          echo "🗄️ Starting Chroma DB (PRODUCTION CONFIG)..."
+          echo "🗄️ Starting Chroma DB v0.4.24..."
           
-          # Create directory for bind mount
+          # Create directory for default Chroma mount point
           mkdir -p ${{ runner.temp }}/chroma-data
           
-          # EXACT prod.yml config + PERSIST_DIRECTORY fix:
-          # - Bind mount ./chroma-data:/data
-          # - IS_PERSISTENT=TRUE
-          # - PERSIST_DIRECTORY=/data (REQUIRED to match mount!)
-          # - ANONYMIZED_TELEMETRY=FALSE
+          # Use v0.4.24 (last stable before :latest broke)
+          # Use default Chroma mount path: /chroma/chroma
           docker run -d \
             --name chroma \
             -p 8000:8000 \
-            -v ${{ runner.temp }}/chroma-data:/data \
+            -v ${{ runner.temp }}/chroma-data:/chroma/chroma \
             -e IS_PERSISTENT=TRUE \
-            -e PERSIST_DIRECTORY=/data \
             -e ANONYMIZED_TELEMETRY=FALSE \
-            chromadb/chroma:latest
+            chromadb/chroma:0.4.24
           
-          # Production uses condition: service_started (NOT healthy)
-          # So just wait for container to be running + API to respond
-          echo "⏳ Waiting for Chroma container to start..."
-          sleep 5
+          echo "⏳ Waiting for Chroma to start..."
+          sleep 10
           
-          echo "⏳ Waiting for Chroma API to respond..."
-          for i in {1..60}; do
-            # Try root endpoint first (simpler, more reliable)
-            if curl -sf http://localhost:8000/ > /dev/null 2>&1; then
-              echo "✅ Chroma root endpoint responding (attempt $i/60)"
-              # Give it a bit more time for full initialization
-              sleep 3
+          echo "⏳ Waiting for HTTP API..."
+          for i in {1..30}; do
+            if curl -sf http://localhost:8000/api/v1/heartbeat > /dev/null 2>&1; then
+              echo "✅ Chroma is ready (attempt $i/30)"
               break
             fi
-            if [ $i -eq 60 ]; then
-              echo "❌ Chroma timeout after 120 seconds"
+            if [ $i -eq 30 ]; then
+              echo "❌ Chroma timeout"
               echo "📋 Chroma logs:"
               docker logs chroma
               echo "📋 Container status:"
@@ -214,13 +205,8 @@ jobs:
           done
           
           echo "📊 Chroma status:"
-          echo "Container running:"
-          docker ps | grep chroma || echo "Container not running!"
-          echo "Checking endpoints:"
-          curl -v http://localhost:8000/ 2>&1 | head -20 || echo "Root endpoint failed"
-          curl -v http://localhost:8000/api/v1/heartbeat 2>&1 | head -20 || echo "Heartbeat failed"
-          echo "Data directory:"
-          docker exec chroma ls -la /data 2>&1 || echo "Can't list /data"
+          docker logs chroma 2>&1 | tail -20
+          curl -s http://localhost:8000/api/v1/heartbeat | python -m json.tool || echo "Heartbeat failed"
 
       - name: Start Ollama
         run: |
