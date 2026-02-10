@@ -239,16 +239,23 @@ jobs:
       - name: Start controller
         working-directory: controller
         env:
+          # Match EXACT env vars from docker-compose.prod.yml
+          RUST_LOG: info
           SEKHA__SERVER_HOST: 0.0.0.0
           SEKHA__SERVER_PORT: 8080
-          SEKHA__DATABASE_URL: sqlite:///home/runner/work/sekha-llm-bridge/sekha-llm-bridge/controller/data/sekha.db
-          SEKHA__CHROMA_URL: http://localhost:8000
-          SEKHA__LLM_BRIDGE_URL: http://localhost:5001
           SEKHA__MCP_API_KEY: test-token-123-456-789-012345678901234
           SEKHA__REST_API_KEY: test-token-123
+          SEKHA__DATABASE_URL: sqlite:///home/runner/work/sekha-llm-bridge/sekha-llm-bridge/controller/data/sekha.db
+          SEKHA__OLLAMA_URL: http://localhost:11434
+          SEKHA__CHROMA_URL: http://localhost:8000
+          SEKHA__LLM_BRIDGE_URL: http://localhost:5001
           SEKHA__LOG_LEVEL: info
+          SEKHA__SUMMARIZATION_ENABLED: true
+          SEKHA__PRUNING_ENABLED: true
+          SEKHA__EMBEDDING_MODEL: nomic-embed-text:latest
+          SEKHA__SUMMARIZATION_MODEL: llama3.1:8b
         run: |
-          echo "🚀 Starting controller..."
+          echo "🚀 Starting controller with complete env vars..."
           ./target/release/sekha-controller > ${{ runner.temp }}/controller.log 2>&1 &
           CONTROLLER_PID=$!
           echo "CONTROLLER_PID=$CONTROLLER_PID" >> $GITHUB_ENV
