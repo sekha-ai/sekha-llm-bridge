@@ -89,7 +89,9 @@ async def lifespan(app: FastAPI):
         models = registry.list_all_models()
         logger.info(f"📦 {len(models)} models available")
         for model in models:
-            logger.info(f"  - {model['provider_id']}: {model['model_id']} ({model['task']})")
+            logger.info(
+                f"  - {model['provider_id']}: {model['model_id']} ({model['task']})"
+            )
 
     except Exception as e:
         logger.error(f"⚠️ Provider health check failed: {e}")

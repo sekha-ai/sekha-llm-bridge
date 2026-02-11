@@ -203,7 +203,7 @@ class Settings(BaseModel):
     @classmethod
     def from_env(cls) -> "Settings":
         """Load settings from environment variables with Ollama defaults.
-        
+
         This provides a zero-configuration startup for Ollama users.
         Environment variables:
         - OLLAMA_BASE_URL: Ollama server URL (default: http://ollama:11434)
@@ -214,12 +214,12 @@ class Settings(BaseModel):
         """
         # Get Ollama URL (Docker-friendly default)
         ollama_url = os.getenv("OLLAMA_BASE_URL", "http://ollama:11434")
-        
+
         # Get model names
         embed_model = os.getenv("EMBEDDING_MODEL", "nomic-embed-text")
         chat_model = os.getenv("CHAT_MODEL", "llama3.1:8b")
         vision_model = os.getenv("VISION_MODEL", "")  # Optional
-        
+
         # Build provider config
         models = [
             ModelConfig(
@@ -239,7 +239,7 @@ class Settings(BaseModel):
                 context_window=8192,
             ),
         ]
-        
+
         # Add vision model if specified
         if vision_model:
             models.append(
@@ -250,7 +250,7 @@ class Settings(BaseModel):
                     supports_vision=True,
                 )
             )
-        
+
         providers = [
             ProviderConfig(
                 id="ollama",
@@ -261,7 +261,7 @@ class Settings(BaseModel):
                 models=models,
             )
         ]
-        
+
         # Build default models
         default_models = DefaultModels(
             embedding=embed_model,
@@ -269,7 +269,7 @@ class Settings(BaseModel):
             chat_smart=chat_model,
             chat_vision=vision_model if vision_model else None,
         )
-        
+
         # Build settings
         return cls(
             version="2.0",
@@ -279,8 +279,12 @@ class Settings(BaseModel):
             server_host=os.getenv("HOST", "0.0.0.0"),
             server_port=int(os.getenv("PORT", "5001")),
             log_level=os.getenv("LOG_LEVEL", "INFO"),
-            celery_broker_url=os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0"),
-            celery_result_backend=os.getenv("CELERY_RESULT_BACKEND", "redis://localhost:6379/0"),
+            celery_broker_url=os.getenv(
+                "CELERY_BROKER_URL", "redis://localhost:6379/0"
+            ),
+            celery_result_backend=os.getenv(
+                "CELERY_RESULT_BACKEND", "redis://localhost:6379/0"
+            ),
         )
 
 
@@ -290,21 +294,21 @@ settings: Optional[Settings] = None
 
 def load_settings(config_path: Optional[str] = None) -> Settings:
     """Load and validate settings from config file or environment.
-    
+
     Args:
         config_path: Path to YAML config file. If None, loads from environment.
-    
+
     Returns:
         Loaded Settings object
     """
     global settings
-    
+
     if config_path and os.path.exists(config_path):
         settings = Settings.from_yaml(config_path)
     else:
         # Fall back to environment-based configuration
         settings = Settings.from_env()
-    
+
     return settings
 
 
