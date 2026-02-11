@@ -71,7 +71,7 @@ class TestSettings:
         """Test settings has required attributes."""
         if settings is not None:
             assert hasattr(settings, "providers")
-            assert hasattr(settings, "default_provider")
+            assert hasattr(settings, "default_models")  # Changed from default_provider
 
     def test_settings_from_environment(self):
         """Test settings can be loaded from environment."""
