@@ -164,7 +164,7 @@ async def health_check():
             status="healthy" if healthy_count > 0 else "degraded",
             timestamp=datetime.utcnow().isoformat(),
             ollama_status=ollama_status,
-            models_loaded=registry.list_all_models(),
+            models_loaded=[m["model_id"] for m in registry.list_all_models()],
         )
     except Exception as e:
         logger.error(f"Health check failed: {e}")
