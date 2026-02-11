@@ -15,7 +15,7 @@ from prometheus_client import make_asgi_app
 
 # Internal imports - all from the package
 from sekha_llm_bridge import config
-from sekha_llm_bridge.config import get_settings
+from sekha_llm_bridge.config import get_settings, load_settings
 from sekha_llm_bridge.models import (
     ChatCompletionChoice,
     ChatCompletionRequest,
@@ -65,6 +65,15 @@ async def lifespan(app: FastAPI):
     """Startup and shutdown events"""
     logger.info("🚀 Starting Sekha LLM Bridge v2.0")
 
+    # Load settings from config.yaml or environment
+    config_path = os.getenv("CONFIG_PATH", "config.yaml")
+    try:
+        load_settings(config_path if os.path.exists(config_path) else None)
+        logger.info("✅ Settings loaded successfully")
+    except Exception as e:
+        logger.error(f"⚠️ Failed to load settings: {e}")
+        raise
+
     # Check provider health on startup
     try:
         health = registry.get_provider_health()
@@ -79,6 +88,8 @@ async def lifespan(app: FastAPI):
         # List available models
         models = registry.list_all_models()
         logger.info(f"📦 {len(models)} models available")
+        for model in models:
+            logger.info(f"  - {model['provider_id']}: {model['model_id']} ({model['task']})")
 
     except Exception as e:
         logger.error(f"⚠️ Provider health check failed: {e}")
@@ -95,7 +106,7 @@ async def lifespan(app: FastAPI):
                 f"⚠️ Legacy Ollama health check failed: {health.get('reason')}"
             )
     except Exception as e:
-        logger.warning(f"Legacy Ollama client not available: {e}")
+        logger.warning(f"⚠️ Legacy Ollama health check failed: {e}")
 
     yield
 
