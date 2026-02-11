@@ -241,7 +241,7 @@ class Settings(BaseModel):
         ]
 
         # Add vision model if specified
-        if vision_model:
+        if vision_model and vision_model.strip() and vision_model.lower() != "none":
             models.append(
                 ModelConfig(
                     model_id=vision_model,
