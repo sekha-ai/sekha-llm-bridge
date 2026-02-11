@@ -1,0 +1,89 @@
+# Sekha LLM Bridge Configuration
+# This is an example configuration file showing how to configure multiple providers.
+# For simple Ollama setups, you can use environment variables instead (see .env.example).
+
+version: "2.0"
+
+# LLM Providers
+providers:
+  # Ollama (Local)
+  - id: ollama
+    provider_type: ollama
+    base_url: http://ollama:11434
+    priority: 1
+    timeout_secs: 120
+    models:
+      - model_id: nomic-embed-text
+        task: embedding
+        context_window: 8192
+        dimension: 768
+      - model_id: llama3.1:8b
+        task: chat_small
+        context_window: 8192
+      - model_id: llama3.1:8b
+        task: chat_smart
+        context_window: 8192
+      - model_id: llama3.2-vision:11b
+        task: vision
+        context_window: 8192
+        supports_vision: true
+
+  # OpenAI (Cloud) - Optional
+  # - id: openai
+  #   provider_type: openai
+  #   base_url: https://api.openai.com/v1
+  #   api_key: ${OPENAI_API_KEY}  # Reference env var
+  #   priority: 2
+  #   timeout_secs: 60
+  #   models:
+  #     - model_id: text-embedding-3-small
+  #       task: embedding
+  #       context_window: 8191
+  #       dimension: 1536
+  #     - model_id: gpt-4o
+  #       task: chat_smart
+  #       context_window: 128000
+  #       supports_vision: true
+  #     - model_id: gpt-4o-mini
+  #       task: chat_small
+  #       context_window: 128000
+
+  # Anthropic (Cloud) - Optional
+  # - id: anthropic
+  #   provider_type: anthropic
+  #   base_url: https://api.anthropic.com/v1
+  #   api_key: ${ANTHROPIC_API_KEY}
+  #   priority: 3
+  #   timeout_secs: 60
+  #   models:
+  #     - model_id: claude-3-5-sonnet-20241022
+  #       task: chat_smart
+  #       context_window: 200000
+  #       supports_vision: true
+
+# Default Model Preferences
+default_models:
+  embedding: nomic-embed-text
+  chat_fast: llama3.1:8b
+  chat_smart: llama3.1:8b
+  chat_vision: llama3.2-vision:11b
+
+# Routing Configuration
+routing:
+  auto_fallback: true
+  require_vision_for_images: true
+  max_cost_per_request: null  # No cost limit
+  circuit_breaker:
+    failure_threshold: 3
+    timeout_secs: 60
+    success_threshold: 2
+
+# Server Configuration
+server_host: 0.0.0.0
+server_port: 5001
+max_connections: 10
+log_level: info
+
+# Background Task Configuration
+celery_broker_url: redis://localhost:6379/0
+celery_result_backend: redis://localhost:6379/0
