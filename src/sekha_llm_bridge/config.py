@@ -284,7 +284,7 @@ class Settings(BaseModel):
         )
 
 
-# Global settings instance
+# Global settings instance - auto-initialize from environment
 settings: Optional[Settings] = None
 
 
@@ -314,3 +314,16 @@ def get_settings() -> Settings:
         # Auto-load from environment if not already loaded
         load_settings()
     return settings
+
+
+# Auto-initialize settings on module import for zero-config startup
+try:
+    # Check if config.yaml exists, otherwise use environment
+    config_path = os.getenv("CONFIG_PATH", "config.yaml")
+    if os.path.exists(config_path):
+        settings = Settings.from_yaml(config_path)
+    else:
+        settings = Settings.from_env()
+except Exception:
+    # Defer initialization to first get_settings() call
+    pass
