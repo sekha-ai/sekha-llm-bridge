@@ -1,7 +1,7 @@
 import pytest
 from fastapi.testclient import TestClient
 from httpx import ASGITransport, AsyncClient
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 from sekha_llm_bridge.main import app
 
@@ -27,13 +27,13 @@ async def test_health_endpoint_models_loaded_type():
         transport=ASGITransport(app=app), base_url="http://test"
     ) as ac:
         resp = await ac.get("/health")
-    
+
     assert resp.status_code == 200
     data = resp.json()
-    
+
     # Verify models_loaded is a list
     assert isinstance(data["models_loaded"], list)
-    
+
     # Verify all elements are strings, not dicts
     for model in data["models_loaded"]:
         assert isinstance(model, str), f"Expected str but got {type(model)}: {model}"
@@ -48,21 +48,21 @@ async def test_health_endpoint_with_multiple_models():
         {"model_id": "llama3.1:8b", "provider_id": "ollama", "task": "chat_smart"},
         {"model_id": "llama3.2-vision:11b", "provider_id": "ollama", "task": "vision"},
     ]
-    
+
     with patch("sekha_llm_bridge.main.registry") as mock_registry:
         mock_registry.list_all_models.return_value = mock_models
         mock_registry.get_provider_health.return_value = {
             "ollama": {"circuit_breaker": {"state": "closed"}}
         }
-        
+
         async with AsyncClient(
             transport=ASGITransport(app=app), base_url="http://test"
         ) as ac:
             resp = await ac.get("/health")
-    
+
     assert resp.status_code == 200
     data = resp.json()
-    
+
     # Verify models_loaded contains only the model IDs as strings
     expected_model_ids = ["nomic-embed-text", "llama3.1:8b", "llama3.2-vision:11b"]
     assert data["models_loaded"] == expected_model_ids
@@ -74,15 +74,15 @@ async def test_health_endpoint_with_empty_models():
     with patch("sekha_llm_bridge.main.registry") as mock_registry:
         mock_registry.list_all_models.return_value = []
         mock_registry.get_provider_health.return_value = {}
-        
+
         async with AsyncClient(
             transport=ASGITransport(app=app), base_url="http://test"
         ) as ac:
             resp = await ac.get("/health")
-    
+
     assert resp.status_code == 200
     data = resp.json()
-    
+
     # Verify models_loaded is an empty list
     assert data["models_loaded"] == []
     assert data["status"] == "degraded"  # No healthy providers
@@ -94,18 +94,18 @@ async def test_health_endpoint_status_healthy():
     mock_models = [
         {"model_id": "test-model", "provider_id": "ollama", "task": "chat"},
     ]
-    
+
     with patch("sekha_llm_bridge.main.registry") as mock_registry:
         mock_registry.list_all_models.return_value = mock_models
         mock_registry.get_provider_health.return_value = {
             "ollama": {"circuit_breaker": {"state": "closed"}}
         }
-        
+
         async with AsyncClient(
             transport=ASGITransport(app=app), base_url="http://test"
         ) as ac:
             resp = await ac.get("/health")
-    
+
     assert resp.status_code == 200
     data = resp.json()
     assert data["status"] == "healthy"
@@ -118,19 +118,19 @@ async def test_health_endpoint_status_degraded():
     mock_models = [
         {"model_id": "test-model", "provider_id": "ollama", "task": "chat"},
     ]
-    
+
     with patch("sekha_llm_bridge.main.registry") as mock_registry:
         mock_registry.list_all_models.return_value = mock_models
         # Simulate unhealthy provider (circuit breaker open)
         mock_registry.get_provider_health.return_value = {
             "ollama": {"circuit_breaker": {"state": "open"}}
         }
-        
+
         async with AsyncClient(
             transport=ASGITransport(app=app), base_url="http://test"
         ) as ac:
             resp = await ac.get("/health")
-    
+
     assert resp.status_code == 200
     data = resp.json()
     assert data["status"] == "degraded"
