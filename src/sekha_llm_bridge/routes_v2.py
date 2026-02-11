@@ -117,9 +117,13 @@ async def route_request(request: RoutingRequest):
         try:
             task = ModelTask(request.task)
         except ValueError:
+            valid_tasks = [t.value for t in ModelTask]
+            logger.error(
+                f"Invalid task '{request.task}' received. Valid tasks: {valid_tasks}"
+            )
             raise HTTPException(
                 status_code=400,
-                detail=f"Invalid task '{request.task}'. Valid tasks: {[t.value for t in ModelTask]}",
+                detail=f"Invalid task '{request.task}'. Valid tasks: {valid_tasks}",
             )
 
         # Route the request
@@ -138,11 +142,15 @@ async def route_request(request: RoutingRequest):
             provider_type=result.provider.provider_type,
         )
 
+    except HTTPException:
+        # Re-raise HTTP exceptions (like 400 from invalid task)
+        raise
     except RuntimeError as e:
         # No suitable provider found
+        logger.error(f"No suitable provider found: {e}")
         raise HTTPException(status_code=503, detail=str(e))
     except Exception as e:
-        logger.error(f"Routing failed: {e}")
+        logger.error(f"Routing failed with exception: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 
