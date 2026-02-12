@@ -376,7 +376,7 @@ curl http://localhost:5001/metrics
 
 ### Q2 2026
 - [ ] Multi-provider load balancing
-- [ ] Cost tracking per provider
+- [x] Cost tracking per provider
 - [ ] Custom model fine-tuning support
 - [ ] Streaming responses
 

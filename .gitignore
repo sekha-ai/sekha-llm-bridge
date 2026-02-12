@@ -64,3 +64,17 @@ config.toml
 __pycache__/
 *.pyc
 *.pyo
+
+# Backup/temp files
+*.backup
+*copy.backup
+
+# Additional Python artifacts
+htmlcov/
+.dmypy.json
+dmypy.json
+*.log
+
+# IDE - additional
+.vscode/settings.json
+.vscode/launch.json
