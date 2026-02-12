@@ -1,6 +1,11 @@
 # Multi-stage build for sekha-llm-bridge
 FROM python:3.14-slim AS builder
 
+# OCI labels for GitHub Container Registry
+LABEL org.opencontainers.image.source=https://github.com/sekha-ai/sekha-llm-bridge
+LABEL org.opencontainers.image.description="Multi-provider LLM operations service with intelligent routing"
+LABEL org.opencontainers.image.licenses=AGPL-3.0
+
 WORKDIR /app
 
 # Install Poetry
