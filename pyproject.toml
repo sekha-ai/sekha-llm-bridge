@@ -47,7 +47,6 @@ readme = "README.md"
 homepage = "https://sekha.dev"
 repository = "https://github.com/sekha-ai/sekha-llm-bridge"
 documentation = "https://docs.sekha.dev"
-changelog = "https://github.com/sekha-ai/sekha-llm-bridge/blob/main/CHANGELOG.md"
 keywords = [
     "ai",
     "llm",
