@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [project]
 name = "sekha-llm-bridge"
-version = "0.1.0"
+version = "0.2.0"
 requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.128.0",
@@ -39,15 +39,37 @@ test = [
 
 [tool.poetry]
 name = "sekha-llm-bridge"
-version = "0.1.0"
-description = "LLM Bridge Service for Sekha"
+version = "0.2.0"
+description = "Universal LLM adapter service for Sekha AI - Multi-provider bridge supporting 100+ LLMs via LiteLLM"
 authors = ["Sekha AI <dev@sekha-ai.dev>"]
 license = "AGPL-3.0-or-later"
 readme = "README.md"
 homepage = "https://sekha.dev"
 repository = "https://github.com/sekha-ai/sekha-llm-bridge"
 documentation = "https://docs.sekha.dev"
-keywords = ["ai", "llm", "embeddings", "memory", "ollama", "rag"]
+changelog = "https://github.com/sekha-ai/sekha-llm-bridge/blob/main/CHANGELOG.md"
+keywords = [
+    "ai",
+    "llm",
+    "litellm",
+    "embeddings",
+    "memory",
+    "ollama",
+    "openai",
+    "anthropic",
+    "claude",
+    "gemini",
+    "rag",
+    "fastapi",
+    "async",
+    "multi-provider",
+    "router",
+    "bridge",
+    "adapter",
+    "openrouter",
+    "summarization",
+    "entity-extraction"
+]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
@@ -55,13 +77,22 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
-    "Programming Language :: Python :: 3.14",    
+    "Programming Language :: Python :: 3.14",
+    "Framework :: FastAPI",
+    "Framework :: AsyncIO",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
 ]
 packages = [
     { include = "sekha_llm_bridge", from = "src" },
 ]
+
+[tool.poetry.urls]
+"Bug Tracker" = "https://github.com/sekha-ai/sekha-llm-bridge/issues"
+"Changelog" = "https://github.com/sekha-ai/sekha-llm-bridge/blob/main/CHANGELOG.md"
+"Funding" = "https://github.com/sponsors/sekha-ai"
+"Discord" = "https://discord.gg/gZb7U9deKH"
 
 [tool.poetry.dependencies]
 python = "^3.12"
