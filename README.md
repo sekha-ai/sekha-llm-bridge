@@ -4,6 +4,7 @@
 
 [![CI](https://github.com/sekha-ai/sekha-llm-bridge/workflows/LLM%20Bridge%20CI/badge.svg)](https://github.com/sekha-ai/sekha-llm-bridge/actions/workflows/ci.yml)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
+[![Version](https://img.shields.io/badge/version-0.2.0-blue.svg)](https://github.com/sekha-ai/sekha-llm-bridge/releases)
 [![Python](https://img.shields.io/badge/python-3.12%2B-blue.svg)](https://www.python.org)
 [![LiteLLM](https://img.shields.io/badge/powered%20by-LiteLLM-purple.svg)](https://litellm.ai)
 [![codecov](https://codecov.io/gh/sekha-ai/sekha-llm-bridge/branch/main/graph/badge.svg)](https://codecov.io/gh/sekha-ai/sekha-llm-bridge)
