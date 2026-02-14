@@ -9,12 +9,8 @@
 [![LiteLLM](https://img.shields.io/badge/powered%20by-LiteLLM-purple.svg)](https://litellm.ai)
 [![codecov](https://codecov.io/gh/sekha-ai/sekha-llm-bridge/branch/main/graph/badge.svg)](https://codecov.io/gh/sekha-ai/sekha-llm-bridge)
 [![Docker Image](https://img.shields.io/badge/ghcr.io-sekha--llm--bridge-blue)](https://github.com/sekha-ai/sekha-docker/pkgs/container/sekha-llm-bridge)
-
-coming soon:
-
 [![PyPI](https://img.shields.io/pypi/v/sekha-llm-bridge.svg)](https://pypi.org/project/sekha-llm-bridge/)
 [![Python Versions](https://img.shields.io/pypi/pyversions/sekha-llm-bridge.svg)](https://pypi.org/project/sekha-llm-bridge/)
-[![PyPI version](https://badge.fury.io/py/sekha-llm-bridge.svg)](https://badge.fury.io/py/sekha-llm-bridge)
 
 ---
 
@@ -116,7 +112,19 @@ The Controller (Rust) focuses on memory orchestration, storage, and retrieval. L
 
 ## 🚀 Quick Start
 
-### With Docker (Recommended)
+### Installation
+
+```bash
+# From PyPI (recommended)
+pip install sekha-llm-bridge
+
+# Or from source
+git clone https://github.com/sekha-ai/sekha-llm-bridge.git
+cd sekha-llm-bridge
+pip install -e .
+```
+
+### With Docker (Full Stack)
 
 LLM-Bridge is included in the full Sekha stack:
 
@@ -134,13 +142,6 @@ docker compose -f docker-compose.prod.yml up -d
 ### Standalone Development
 
 ```bash
-# Clone
-git clone https://github.com/sekha-ai/sekha-llm-bridge.git
-cd sekha-llm-bridge
-
-# Install dependencies
-pip install -r requirements.txt
-
 # Configure (copy and edit)
 cp .env.example .env
 
@@ -270,10 +271,10 @@ OpenAI-compatible chat endpoint.
 
 ```bash
 # Install dev dependencies
-pip install -r requirements-dev.txt
+pip install -e ".[dev]"
 
-# Pre-commit hooks
-pre-commit install
+# Or with Poetry
+poetry install --with dev
 ```
 
 ### Testing
@@ -366,6 +367,12 @@ curl http://localhost:5001/metrics
 
 ---
 
+## 📝 Changelog
+
+See **[CHANGELOG.md](https://github.com/sekha-ai/sekha-llm-bridge/blob/main/CHANGELOG.md)** for full release history.
+
+---
+
 ## 🗺️ Roadmap
 
 ### Q1 2026
@@ -377,7 +384,7 @@ curl http://localhost:5001/metrics
 
 ### Q2 2026
 - [ ] Multi-provider load balancing
-- [x] Cost tracking per provider
+- [ ] Cost tracking per provider
 - [ ] Custom model fine-tuning support
 - [ ] Streaming responses
 
@@ -404,20 +411,16 @@ curl http://localhost:5001/metrics
 
 ## 📄 License
 
-AGPL-3.0 - Free for personal and educational use.
-
-Commercial license available: [hello@sekha.dev](mailto:hello@sekha.dev)
-
-**[View License Details](LICENSE)**
+AGPL-3.0-or-later - **[License Details](https://github.com/sekha-ai/sekha-llm-bridge/blob/main/LICENSE)**
 
 ---
 
 ## 🙋 Support
 
 - **Issues**: [GitHub Issues](https://github.com/sekha-ai/sekha-llm-bridge/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/sekha-ai/sekha-controller/discussions)
-- **Email**: [dev@sekha.dev](mailto:dev@sekha.dev)
+- **Discord**: [Join our Discord](https://discord.gg/gZb7U9deKH)
+- **Email**: [dev@sekha-ai.dev](mailto:dev@sekha-ai.dev)
 
 ---
 
-**Built with ❤️ by the Sekha team**
+**Built with ❤️ by the Sekha AI team**
