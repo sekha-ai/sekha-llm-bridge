@@ -7,9 +7,6 @@ on:
 
 jobs:
   pypi-publish:
-    # DISABLED: Remove 'if: false' line below when ready to enable PyPI releases
-    if: false
-    
     name: Build and publish Python distribution to PyPI
     runs-on: ubuntu-latest
     
