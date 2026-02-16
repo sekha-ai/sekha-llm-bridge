@@ -99,7 +99,7 @@ fastapi = "^0.129.0"
 uvicorn = { extras = ["standard"], version = "^0.40.0" }
 pydantic = "^2.9.0"
 pydantic-settings = "^2.5.2"
-litellm = "^1.81.3"
+litellm = "^1.81.12"
 celery = "^5.4.0"
 redis = "^7.1.0"
 httpx = "^0.28.1"
