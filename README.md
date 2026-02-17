@@ -10,7 +10,6 @@
 [![codecov](https://codecov.io/gh/sekha-ai/sekha-llm-bridge/branch/main/graph/badge.svg)](https://codecov.io/gh/sekha-ai/sekha-llm-bridge)
 [![Docker Image](https://img.shields.io/badge/ghcr.io-sekha--llm--bridge-blue)](https://github.com/sekha-ai/sekha-docker/pkgs/container/sekha-llm-bridge)
 [![PyPI](https://img.shields.io/pypi/v/sekha-llm-bridge.svg)](https://pypi.org/project/sekha-llm-bridge/)
-[![Python Versions](https://img.shields.io/pypi/pyversions/sekha-llm-bridge.svg)](https://pypi.org/project/sekha-llm-bridge/)
 
 ---
 
